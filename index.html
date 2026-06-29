@@ -669,6 +669,7 @@
     games.forEach((m) => {
       const id = parseInt(m.id, 10);
       if (!id) return;
+      if (id < 73) return; // only knockout matches (73+) affect the bracket & eliminations
       const hs = parseInt(m.home_score, 10);
       const as = parseInt(m.away_score, 10);
       const haveScore = !isNaN(hs) && !isNaN(as);
