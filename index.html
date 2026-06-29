@@ -193,6 +193,35 @@
   }
   .panel-body { padding: 0 14px 16px; }
   .panel-body .table-wrap { margin: 0; box-shadow: none; }
+
+  /* still-in-contention */
+  .standings-section { max-width: 1200px; margin: 0 auto; }
+  .standings-note { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  .standings {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+  .stand-card {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 3px solid var(--green);
+    border-radius: 12px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,.2);
+  }
+  .stand-card.out { opacity: .5; border-left-color: #6b3a3a; }
+  .stand-name { font-weight: 700; font-size: 14px; }
+  .stand-card.out .stand-name { text-decoration: line-through; }
+  .stand-teams { display: flex; flex-wrap: wrap; gap: 5px; margin-left: 2px; }
+  .tchip {
+    font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: rgba(255,255,255,.06); border: 1px solid var(--line); color: var(--text);
+  }
+  .tchip.dead { text-decoration: line-through; color: var(--muted); opacity: .7; }
+  .stand-status {
+    margin-left: auto; font-size: 10px; font-weight: 800; letter-spacing: .8px;
+    padding: 3px 9px; border-radius: 999px;
+    background: rgba(31,157,77,.18); color: #8be0a4; border: 1px solid rgba(31,157,77,.4);
+  }
+  .stand-card.out .stand-status { background: rgba(160,80,80,.16); color: #e3a3a3; border-color: rgba(160,80,80,.4); }
 </style>
 </head>
 <body>
@@ -220,6 +249,12 @@
       </div>
     </div>
   </details>
+
+  <section class="standings-section">
+    <div class="section-title">Still in Contention</div>
+    <p class="standings-note" id="standingsNote">Loading live results…</p>
+    <div class="standings" id="standings"></div>
+  </section>
 
   <section class="bracket-section">
     <h2>🏆 FIFA 2026 — Knockout Bracket</h2>
@@ -494,6 +529,7 @@
   const WINNERS = Object.assign({}, PREDICTED_WINNERS); // live data merges in here
   const SCORES = {}; // matchNumber -> [homeScore, awayScore], filled from live data
   const LIVE = new Set(); // match numbers currently in progress
+  const ELIMINATED = new Set(); // poll-country names knocked out (from real results)
 
   // Match dates (2026)
   const DATES = {
@@ -618,6 +654,7 @@
   }
   buildBracket();
   updateBracketVoters();
+  renderStandings();
 
   // =========================================================================
   //  LIVE SYNC with FIFA World Cup 2026 results (worldcup26.ir, no key needed).
@@ -628,6 +665,7 @@
 
   function applyLiveResults(games) {
     LIVE.clear();
+    ELIMINATED.clear();
     games.forEach((m) => {
       const id = parseInt(m.id, 10);
       if (!id) return;
@@ -643,6 +681,9 @@
       if (done && haveScore && hs !== as) {
         // Real result → overwrite prediction; the winner advances via {ref}.
         WINNERS[id] = hs > as ? m.home_team_name_en : m.away_team_name_en;
+        // The loser is knocked out of the tournament.
+        const loser = hs > as ? m.away_team_name_en : m.home_team_name_en;
+        ELIMINATED.add(pollKey(loser));
       }
       // Ties at full time (decided on penalties) are left as the prediction,
       // since the shootout winner isn't derivable from the score alone.
@@ -652,6 +693,45 @@
   function setBracketNote(text) {
     const note = document.getElementById("bracketNote");
     if (note) note.textContent = text;
+  }
+
+  // "Still in Contention" — a participant stays in while at least one of their
+  // picked countries is still alive (not eliminated by a real result).
+  function renderStandings() {
+    const el = document.getElementById("standings");
+    if (!el) return;
+    const rows = PEOPLE.map((person, p) => {
+      const picks = (state[p] || []).slice();
+      const alive = picks.filter((c) => !ELIMINATED.has(c));
+      return {
+        name: person.name,
+        ini: (person.initial || person.name.charAt(0)).toUpperCase(),
+        color: VOTER_COLORS[p % VOTER_COLORS.length],
+        picks: picks,
+        isIn: alive.length > 0
+      };
+    });
+    rows.sort((a, b) => (b.isIn - a.isIn) || a.name.localeCompare(b.name));
+
+    el.innerHTML = "";
+    let inCount = 0;
+    rows.forEach((r) => {
+      if (r.isIn) inCount++;
+      const card = document.createElement("div");
+      card.className = "stand-card" + (r.isIn ? "" : " out");
+      const chips = r.picks
+        .map((c) => '<span class="tchip' + (ELIMINATED.has(c) ? " dead" : "") + '">' + c + "</span>")
+        .join("");
+      card.innerHTML =
+        '<span class="vchip" style="background:' + (r.isIn ? r.color : "#55606b") + '">' + r.ini + "</span>" +
+        '<span class="stand-name">' + r.name + "</span>" +
+        '<span class="stand-teams">' + chips + "</span>" +
+        '<span class="stand-status">' + (r.isIn ? "IN" : "OUT") + "</span>";
+      el.appendChild(card);
+    });
+
+    const note = document.getElementById("standingsNote");
+    if (note) note.textContent = inCount + " of " + PEOPLE.length + " players still have a country alive";
   }
 
   const FAST_MS = 30000;   // refresh every 30s while a match is in progress
@@ -670,6 +750,7 @@
         applyLiveResults(games);
         buildBracket();
         updateBracketVoters();
+        renderStandings();
         const live = LIVE.size > 0 ? " · " + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE" : "";
         setBracketNote("🟢 Live results synced" + live + " · Round of 32 → Final (Jul 19)");
       })
