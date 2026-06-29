@@ -364,7 +364,7 @@
   const thead = document.createElement("thead");
   const hr = document.createElement("tr");
   hr.innerHTML = '<th class="corner">Participant</th>' +
-    COUNTRIES.map((c) => "<th>" + c + "</th>").join("") +
+    COUNTRIES.map((c) => "<th>" + labelOf(c) + "</th>").join("") +
     '<th class="totcol">Total</th>';
   thead.appendChild(hr);
   table.appendChild(thead);
@@ -406,6 +406,8 @@
   table.appendChild(tfoot);
 
   function cssId(s) { return s.replace(/[^a-z0-9]/gi, "_"); }
+  // Display label only — internal value stays "USA" so stored votes keep working.
+  function labelOf(c) { return c === "USA" ? "United States" : c; }
 
   // --- Logic ----------------------------------------------------------------
   function toggle(p, country) {
@@ -721,7 +723,7 @@
       const card = document.createElement("div");
       card.className = "stand-card" + (r.isIn ? "" : " out");
       const chips = r.picks
-        .map((c) => '<span class="tchip' + (ELIMINATED.has(c) ? " dead" : "") + '">' + c + "</span>")
+        .map((c) => '<span class="tchip' + (ELIMINATED.has(c) ? " dead" : "") + '">' + labelOf(c) + "</span>")
         .join("");
       card.innerHTML =
         '<span class="vchip" style="background:' + (r.isIn ? r.color : "#55606b") + '">' + r.ini + "</span>" +
