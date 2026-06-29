@@ -123,6 +123,7 @@
   .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
   .swatch.poll { background: rgba(245,185,33,.85); }
   .swatch.win { background: var(--green); }
+  .swatch.pred { background: #f0c674; }
 
   .bracket { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 14px; }
   .round { display: flex; flex-direction: column; min-width: 185px; flex: 0 0 auto; }
@@ -139,6 +140,11 @@
   .team.poll .nm { color: var(--gold); font-weight: 700; }
   .team.win .nm { color: #8be0a4; font-weight: 700; }
   .team.tbd .nm { color: var(--muted); font-style: italic; }
+  .team.pred .nm { color: #f0c674; font-style: italic; }
+  .pred-tag {
+    font-size: 8px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+    color: #0b0f14; background: #f0c674; border-radius: 4px; padding: 1px 4px; margin-left: 5px;
+  }
   .tleft { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .voters { display: inline-flex; gap: 3px; flex-wrap: wrap; }
   .vchip {
@@ -254,6 +260,7 @@
     <div class="legend">
       <span><i class="swatch poll"></i> Your poll country</span>
       <span><i class="swatch win"></i> Won / advanced</span>
+      <span><i class="swatch pred"></i> Predicted</span>
     </div>
     <div class="bracket" id="bracket"></div>
   </section>
@@ -536,6 +543,7 @@
   const SCORES = {}; // matchNumber -> [homeScore, awayScore], filled from live data
   const LIVE = new Set(); // match numbers currently in progress
   const ELIMINATED = new Set(); // poll-country names knocked out (from real results)
+  const ACTUAL = new Set();     // match numbers with a real, played result (not a prediction)
 
   // Match dates (2026)
   const DATES = {
@@ -575,15 +583,29 @@
     nm.className = "nm";
 
     const name = resolveName(t);
+    let predicted = false;
     if (name == null) {
       nm.textContent = "Winner M" + t.ref;
       div.classList.add("tbd");
     } else {
       nm.textContent = name;
       if (POLL_TEAMS.has(name)) div.classList.add("poll");
-      if (WINNERS[match.n] === name) div.classList.add("win"); // won this match
+      const isWinnerHere = WINNERS[match.n] === name;
+      const arrivedViaPrediction = !!(t.ref && WINNERS[t.ref] && !ACTUAL.has(t.ref));
+      if (isWinnerHere && ACTUAL.has(match.n)) {
+        div.classList.add("win");   // real, played result
+      } else if ((isWinnerHere && !ACTUAL.has(match.n)) || arrivedViaPrediction) {
+        div.classList.add("pred");  // predicted advancement (not yet played)
+        predicted = true;
+      }
     }
     left.appendChild(nm);
+    if (predicted) {
+      const tag = document.createElement("span");
+      tag.className = "pred-tag";
+      tag.textContent = "pred";
+      left.appendChild(tag);
+    }
 
     if (name != null) {
       const voters = document.createElement("span");
@@ -672,6 +694,7 @@
   function applyLiveResults(games) {
     LIVE.clear();
     ELIMINATED.clear();
+    ACTUAL.clear();
     games.forEach((m) => {
       const id = parseInt(m.id, 10);
       if (!id) return;
@@ -688,6 +711,7 @@
       if (done && haveScore && hs !== as) {
         // Real result → overwrite prediction; the winner advances via {ref}.
         WINNERS[id] = hs > as ? m.home_team_name_en : m.away_team_name_en;
+        ACTUAL.add(id); // this match has actually been played
         // The loser is knocked out of the tournament.
         const loser = hs > as ? m.away_team_name_en : m.home_team_name_en;
         ELIMINATED.add(pollKey(loser));
