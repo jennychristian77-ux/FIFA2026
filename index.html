@@ -71,9 +71,14 @@
     background: var(--card); border: 1px solid var(--line); border-left: 3px solid #e23b3b;
     border-radius: 12px; padding: 10px 14px; box-shadow: 0 4px 14px rgba(0,0,0,.2);
   }
-  .live-card .lc-teams { font-weight: 600; font-size: 14px; }
+  .live-card .lc-teams { font-weight: 600; font-size: 14px; flex: 1; }
   .live-card .lc-score { color: var(--gold); font-weight: 800; margin: 0 4px; }
-  .live-card .lc-stage { margin-left: auto; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+  .live-card .lc-stage { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+  .lc-watch {
+    font-size: 11px; font-weight: 700; color: #fff; background: var(--green);
+    border-radius: 999px; padding: 5px 11px; text-decoration: none; white-space: nowrap; flex: 0 0 auto;
+  }
+  .lc-watch:hover { filter: brightness(1.12); }
   .live-dot { width: 9px; height: 9px; border-radius: 50%; background: #e23b3b; flex: 0 0 auto; animation: blink 1.1s steps(1) infinite; }
 
   .pricing {
@@ -765,7 +770,8 @@
         '<span class="lc-teams">' + m.home_team_name_en +
         '<span class="lc-score">' + m.home_score + "–" + m.away_score + "</span>" +
         m.away_team_name_en + "</span>" +
-        '<span class="lc-stage">' + (stage ? stage + " · " : "") + minute + "</span></div>";
+        '<span class="lc-stage">' + (stage ? stage + " · " : "") + minute + "</span>" +
+        '<a class="lc-watch" href="https://plus.fifa.com/" target="_blank" rel="noopener">📺 FIFA+</a></div>';
     }).join("");
   }
 
