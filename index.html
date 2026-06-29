@@ -236,12 +236,6 @@
 <body>
   <header class="hero">
     <h1>FIFA World Cup 2026 · Friends Pool</h1>
-    <p class="sub">Locked picks &amp; live knockout bracket</p>
-    <div class="badges">
-      <span class="badge-chip pot">💰 Pot <b id="heroTotal">$0</b></span>
-      <span class="badge-chip">👥 <b>10</b> players</span>
-      <span class="badge-chip"><i class="dot"></i> Live scores</span>
-    </div>
   </header>
 
   <details class="panel">
@@ -800,8 +794,6 @@
   if (VOTES_LOCKED) {
     document.getElementById("resetBtn").style.display = "none";
     document.querySelectorAll("td.cell").forEach((td) => (td.style.cursor = "default"));
-    const sub = document.querySelector("header p");
-    if (sub) sub.textContent = "Votes are final · totals locked";
   }
 
   document.getElementById("resetBtn").addEventListener("click", () => {
