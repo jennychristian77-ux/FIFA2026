@@ -740,8 +740,7 @@
         isIn: alive.length > 0
       };
     });
-    rows.sort((a, b) => (b.isIn - a.isIn) || a.name.localeCompare(b.name));
-
+    // Keep the participant list in its defined order (no re-sorting).
     el.innerHTML = "";
     let inCount = 0;
     rows.forEach((r) => {
