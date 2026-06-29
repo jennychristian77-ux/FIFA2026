@@ -539,6 +539,7 @@
   };
   const WINNERS = Object.assign({}, PREDICTED_WINNERS); // live data merges in here
   const SCORES = {}; // matchNumber -> [homeScore, awayScore], filled from live data
+  const PENS = {};   // matchNumber -> [homePens, awayPens] for shootouts
   const LIVE = new Set(); // match numbers currently in progress
   const ELIMINATED = new Set(); // poll-country names knocked out (from real results)
   const ACTUAL = new Set();     // match numbers with a real, played result (not a prediction)
@@ -619,7 +620,8 @@
     if (sc && name != null && sc[idx] !== undefined) {
       const scEl = document.createElement("span");
       scEl.className = "sc";
-      scEl.textContent = sc[idx];
+      const pens = PENS[match.n];
+      scEl.textContent = pens ? sc[idx] + " (" + pens[idx] + ")" : sc[idx];
       div.appendChild(scEl);
     }
     return div;
@@ -701,24 +703,32 @@
       if (id < 73) return; // only knockout matches (73+) affect the bracket & eliminations
       const hs = parseInt(m.home_score, 10);
       const as = parseInt(m.away_score, 10);
+      const hp = parseInt(m.home_penalty_score, 10);
+      const ap = parseInt(m.away_penalty_score, 10);
       const haveScore = !isNaN(hs) && !isNaN(as);
+      const havePens = !isNaN(hp) && !isNaN(ap);
       const te = (m.time_elapsed || "").toLowerCase();
       const done = m.finished === "TRUE" || te === "finished";
       const live = te === "live" || te === "inprogress";
 
       if (live) LIVE.add(id);
       if (haveScore && (done || live)) SCORES[id] = [hs, as];
+      if (havePens) PENS[id] = [hp, ap];
 
-      if (done && haveScore && hs !== as) {
-        // Real result → overwrite prediction; the winner advances via {ref}.
-        WINNERS[id] = hs > as ? m.home_team_name_en : m.away_team_name_en;
-        ACTUAL.add(id); // this match has actually been played
-        // The loser is knocked out of the tournament.
-        const loser = hs > as ? m.away_team_name_en : m.home_team_name_en;
-        ELIMINATED.add(pollKey(loser));
+      if (done && haveScore) {
+        // Winner = more goals, or if level, the penalty-shootout winner.
+        var home = m.home_team_name_en, away = m.away_team_name_en, winner = null;
+        if (hs > as) winner = home;
+        else if (as > hs) winner = away;
+        else if (havePens && hp !== ap) winner = hp > ap ? home : away;
+
+        if (winner) {
+          WINNERS[id] = winner;            // overwrite the prediction
+          ACTUAL.add(id);                  // this match has actually been played
+          ELIMINATED.add(pollKey(winner === home ? away : home)); // loser is knocked out
+        }
       }
-      // Ties at full time (decided on penalties) are left as the prediction,
-      // since the shootout winner isn't derivable from the score alone.
+      // A draw still awaiting its shootout result stays as the prediction.
     });
   }
 
