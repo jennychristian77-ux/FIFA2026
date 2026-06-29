@@ -591,11 +591,13 @@
       nm.textContent = name;
       if (POLL_TEAMS.has(name)) div.classList.add("poll");
       const isWinnerHere = WINNERS[match.n] === name;
+      // A team only "arrived via prediction" if its feeding match wasn't actually
+      // played. Round-of-32 teams are concrete fixtures, so they're never predicted.
       const arrivedViaPrediction = !!(t.ref && WINNERS[t.ref] && !ACTUAL.has(t.ref));
       if (isWinnerHere && ACTUAL.has(match.n)) {
         div.classList.add("win");   // real, played result
-      } else if ((isWinnerHere && !ACTUAL.has(match.n)) || arrivedViaPrediction) {
-        div.classList.add("pred");  // predicted advancement (not yet played)
+      } else if (arrivedViaPrediction) {
+        div.classList.add("pred");  // placed here by a predicted earlier result
         predicted = true;
       }
     }
