@@ -190,6 +190,10 @@
     margin-left: auto; font-size: 11px; font-weight: 500; letter-spacing: .3px;
     text-transform: none; color: var(--muted);
   }
+  .panel > summary .names-preview {
+    font-size: 12px; font-weight: 500; letter-spacing: normal;
+    text-transform: none; color: var(--muted);
+  }
   .panel-body { padding: 0 14px 16px; }
   .panel-body .table-wrap { margin: 0; box-shadow: none; }
 
@@ -236,11 +240,13 @@
     </div>
   </header>
 
-  <section class="standings-section">
-    <div class="section-title">Still in Contention</div>
-    <p class="standings-note" id="standingsNote">Loading live results…</p>
-    <div class="standings" id="standings"></div>
-  </section>
+  <details class="panel">
+    <summary>Still in Contention <span class="names-preview" id="standingsNames"></span></summary>
+    <div class="panel-body">
+      <p class="standings-note" id="standingsNote">Loading live results…</p>
+      <div class="standings" id="standings"></div>
+    </div>
+  </details>
 
   <section class="bracket-section">
     <h2>🏆 Knockout Bracket</h2>
@@ -733,6 +739,10 @@
 
     const note = document.getElementById("standingsNote");
     if (note) note.textContent = inCount + " of " + PEOPLE.length + " players still have a country alive";
+
+    // Collapsed summary shows just the names of players still in.
+    const namesEl = document.getElementById("standingsNames");
+    if (namesEl) namesEl.textContent = rows.filter((r) => r.isIn).map((r) => r.name).join(", ");
   }
 
   const FAST_MS = 30000;   // refresh every 30s while a match is in progress
