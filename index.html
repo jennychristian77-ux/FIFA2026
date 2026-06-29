@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FIFA 2026 Poll & Live Bracket</title>
+<meta name="description" content="FIFA World Cup 2026 friends poll with live knockout bracket and scores." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --green: #1f9d4d;
+    --green-deep: #14803c;
+    --gold: #f5b921;
+    --card: #161d25;
+    --card-2: #1f2832;
+    --line: #2c3845;
+    --text: #eef3f8;
+    --muted: #93a1ad;
+    --shadow: 0 12px 34px rgba(0,0,0,.38);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 16px 56px;
+    background:
+      radial-gradient(900px 520px at 12% -10%, rgba(31,157,77,.20), transparent 60%),
+      radial-gradient(900px 520px at 100% -5%, rgba(245,185,33,.13), transparent 55%),
+      linear-gradient(160deg, #0b0f14, #0e151d 60%, #0b0f14);
+    background-attachment: fixed;
+  }
+
+  /* Hero */
+  .hero {
+    max-width: 1200px; margin: 0 auto 22px; padding: 32px 24px 26px;
+    text-align: center;
+    background: linear-gradient(160deg, rgba(31,157,77,.16), rgba(245,185,33,.05));
+    border: 1px solid var(--line); border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .hero .flags { font-size: 22px; letter-spacing: 3px; }
+  .hero h1 {
+    margin: 10px 0 4px; font-size: clamp(24px, 4vw, 34px); font-weight: 800; letter-spacing: .3px;
+    background: linear-gradient(90deg, #ffffff, #cfe9d8 55%, var(--gold));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .sub { color: var(--muted); margin: 0; font-size: 14px; }
+  .hero .badges { margin-top: 16px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .badge-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.05); border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 15px; font-size: 13px; color: var(--text);
+  }
+  .badge-chip b { color: var(--gold); font-weight: 700; }
+  .badge-chip.pot b { font-size: 16px; }
+  .badge-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(31,157,77,.25); }
+  .section-title { max-width: 1200px; margin: 36px auto 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 1.4px; color: var(--muted); font-weight: 700; }
+
+  .pricing {
+    max-width: 1200px;
+    margin: 0 auto 14px;
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  }
+  .price-pill {
+    background: rgba(255,255,255,.04); border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 16px; font-size: 13px; color: var(--muted);
+  }
+  .price-pill b { color: var(--gold); }
+
+  .table-wrap {
+    max-width: 1200px; margin: 0 auto;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: auto; box-shadow: var(--shadow);
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border: 1px solid var(--line); text-align: center; white-space: nowrap; }
+
+  thead th {
+    background: var(--card-2); padding: 12px 10px; font-size: 13px;
+    position: sticky; top: 0; z-index: 3;
+  }
+  thead th.corner, thead th.totcol { color: var(--gold); }
+
+  td.name, th.corner {
+    text-align: left; padding: 10px 14px; font-weight: 600;
+    position: sticky; left: 0; z-index: 2; background: var(--card-2);
+  }
+  thead th.corner { z-index: 4; }
+
+  td.cell { padding: 8px; cursor: pointer; min-width: 84px; transition: .1s; }
+  td.cell:hover { background: #2a3742; }
+  td.cell.on { background: var(--green); color: #fff; font-weight: 700; }
+  td.cell .badge { font-size: 13px; }
+
+  td.total, tfoot td {
+    font-weight: 700; color: var(--gold); padding: 10px 14px; background: var(--card-2);
+  }
+  tfoot td { position: sticky; bottom: 0; z-index: 2; }
+  tfoot td.label { text-align: left; color: var(--text); }
+  tfoot td.grand { color: var(--gold); font-size: 17px; }
+  tfoot td .cnt { color: var(--text); font-weight: 700; }
+  tfoot td .sub { color: var(--muted); font-size: 11px; display: block; font-weight: 400; }
+
+  .actions { max-width: 1200px; margin: 16px auto 0; display: flex; justify-content: flex-end; gap: 10px; }
+  .actions button {
+    background: var(--card-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 9px 16px; font-size: 13px; cursor: pointer;
+  }
+  .actions button:hover { border-color: var(--green); }
+
+  /* --- Knockout bracket --- */
+  .bracket-section { max-width: 1250px; margin: 40px auto 0; }
+  .bracket-section h2 { text-align: center; font-size: 22px; margin: 0 0 4px; }
+  .bracket-note { text-align: center; color: var(--muted); font-size: 13px; margin: 0 0 6px; }
+  .legend { display: flex; gap: 16px; justify-content: center; font-size: 12px; color: var(--muted); margin-bottom: 16px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .swatch.poll { background: rgba(245,185,33,.85); }
+  .swatch.win { background: var(--green); }
+
+  .bracket { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 14px; }
+  .round { display: flex; flex-direction: column; min-width: 185px; flex: 0 0 auto; }
+  .round-title { text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+  .round-body { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 10px; }
+  .match { background: var(--card); border: 1px solid var(--line); border-radius: 11px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.22); transition: transform .12s, border-color .12s; }
+  .match:hover { transform: translateY(-2px); border-color: #3a4856; }
+  .match .mnum { font-size: 10px; color: var(--muted); padding: 4px 10px 0; }
+  .team { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; font-size: 13px; border-top: 1px solid var(--line); }
+  .team:first-of-type { border-top: none; }
+  .team .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .team .sc { color: var(--gold); font-weight: 700; margin-left: 8px; }
+  .team.poll { background: rgba(245,185,33,.12); }
+  .team.poll .nm { color: var(--gold); font-weight: 700; }
+  .team.win .nm { color: #8be0a4; font-weight: 700; }
+  .team.tbd .nm { color: var(--muted); font-style: italic; }
+  .tleft { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .voters { display: inline-flex; gap: 3px; flex-wrap: wrap; }
+  .vchip {
+    width: 17px; height: 17px; border-radius: 50%;
+    background: #3a7bd5; color: #fff; font-size: 9px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: default;
+  }
+
+  /* live (in-progress) match pulse */
+  @keyframes matchPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(245,185,33,.55); }
+    70%  { box-shadow: 0 0 0 9px rgba(245,185,33,0); }
+    100% { box-shadow: 0 0 0 0 rgba(245,185,33,0); }
+  }
+  .match.live-match { border-color: var(--gold); animation: matchPulse 1.5s infinite; }
+  .match.live-match .mnum { color: var(--gold); font-weight: 700; }
+  .live-tag {
+    color: var(--gold); font-weight: 700; margin-left: 6px;
+    animation: blink 1.2s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  .site-footer {
+    max-width: 1200px; margin: 40px auto 0; text-align: center;
+    color: var(--muted); font-size: 12px; padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* collapsible poll panel */
+  .panel {
+    max-width: 1200px; margin: 28px auto 0;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .panel > summary {
+    list-style: none; cursor: pointer; user-select: none;
+    padding: 16px 20px; font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.2px; color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .panel > summary:hover { background: rgba(255,255,255,.03); }
+  .panel > summary::-webkit-details-marker { display: none; }
+  .panel > summary::before {
+    content: "\25B8"; color: var(--gold); font-size: 13px; transition: transform .15s;
+  }
+  .panel[open] > summary::before { transform: rotate(90deg); }
+  .panel > summary .hint {
+    margin-left: auto; font-size: 11px; font-weight: 500; letter-spacing: .3px;
+    text-transform: none; color: var(--muted);
+  }
+  .panel-body { padding: 0 14px 16px; }
+  .panel-body .table-wrap { margin: 0; box-shadow: none; }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="flags">🇨🇦 🇺🇸 🇲🇽</div>
+    <h1>FIFA World Cup 2026 · Friends Pool</h1>
+    <p class="sub">Locked picks &amp; live knockout bracket</p>
+    <div class="badges">
+      <span class="badge-chip pot">💰 Pot <b id="heroTotal">$0</b></span>
+      <span class="badge-chip">👥 <b>10</b> players</span>
+      <span class="badge-chip">1st pick <b>$10</b></span>
+      <span class="badge-chip">2nd pick <b>$15</b></span>
+      <span class="badge-chip"><i class="dot"></i> Live scores</span>
+    </div>
+  </header>
+
+  <details class="panel">
+    <summary>Poll Selections <span class="hint">click to expand</span></summary>
+    <div class="panel-body">
+      <div class="table-wrap">
+        <table id="poll"></table>
+      </div>
+      <div class="actions">
+        <button id="resetBtn">Reset to original votes</button>
+      </div>
+    </div>
+  </details>
+
+  <section class="bracket-section">
+    <h2>🏆 FIFA 2026 — Knockout Bracket</h2>
+    <p class="bracket-note" id="bracketNote">Remaining games · Round of 32 → Final (MetLife Stadium, July 19)</p>
+    <div class="legend">
+      <span><i class="swatch poll"></i> Your poll country</span>
+      <span><i class="swatch win"></i> Won / advanced</span>
+    </div>
+    <div class="bracket" id="bracket"></div>
+  </section>
+
+  <footer class="site-footer">
+    ⚽ FIFA World Cup 2026 · Live results from worldcup26.ir · Final at MetLife Stadium, Jul 19
+  </footer>
+
+<!-- Firebase SDK (loads only if you fill in the config below) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+  /* =========================================================================
+     LIVE SHARED VOTING — paste your Firebase config between the { } below.
+     Get it free in ~3 min (see the instructions I gave you). Until you add it,
+     the page runs in "Local only" mode (works, but votes are not shared).
+     ========================================================================= */
+  const firebaseConfig = {
+    apiKey: "AIzaSyAqlvKH77a3d1PIWilhzvKqPLpfHD1jAAs",
+    authDomain: "fifa-2026-poll.firebaseapp.com",
+    databaseURL: "https://fifa-2026-poll-default-rtdb.firebaseio.com",
+    projectId: "fifa-2026-poll",
+    storageBucket: "fifa-2026-poll.firebasestorage.app",
+    messagingSenderId: "682115492111",
+    appId: "1:682115492111:web:213a15404fae185e5b367a",
+    measurementId: "G-MDJN109BZW"
+  };
+
+  // --- Poll config ----------------------------------------------------------
+  const VOTES_LOCKED = true;     // votes are final — set to false to allow editing again
+  const PRICE_TIERS = [10, 15];  // 1st pick $10, 2nd pick $15
+  function priceForRank(rank) { return PRICE_TIERS[Math.min(rank, PRICE_TIERS.length) - 1]; }
+
+  const COUNTRIES = [
+    "Argentina","Brazil","Colombia","England","France","Germany","Spain","USA"
+  ];
+
+  const PEOPLE = [
+    { name: "Pina",    picks: ["Argentina"] },
+    { name: "Wilson",  picks: ["Argentina"] },
+    { name: "Sandy",   picks: ["Argentina", "Germany"], initial: "R" },
+    { name: "Ila",     picks: ["Argentina"] },
+    { name: "Silas",   picks: ["France", "England"], initial: "G" },
+    { name: "Jay",     picks: ["France", "USA"] },
+    { name: "Minesh",  picks: ["France", "Colombia"] },
+    { name: "Nilpa",   picks: ["USA"] },
+    { name: "Smita",   picks: ["Spain"] },
+    { name: "Ruzwalt", picks: ["Brazil"] }
+  ];
+
+  // state[personIndex] = ordered array of selected country names
+  let state = PEOPLE.map((person) => person.picks.slice());
+
+  // --- Firebase wiring ------------------------------------------------------
+  let dbRef = null; // null => local mode
+  const statusEl = document.getElementById("status");
+  const isConfigured = Object.keys(firebaseConfig).length > 0 && firebaseConfig.databaseURL;
+
+  function setStatus(mode, msg) {
+    if (!statusEl) return; // status banner removed
+    statusEl.className = "status " + mode;
+    statusEl.textContent = msg;
+  }
+
+  if (isConfigured && window.firebase) {
+    try {
+      firebase.initializeApp(firebaseConfig);
+      dbRef = firebase.database().ref("polls/fifa2026/votes");
+
+      // Listen for live updates from everyone
+      dbRef.on("value", (snap) => {
+        const val = snap.val();
+        if (!val) {
+          // First ever load → seed the database with the original votes
+          pushAll();
+        } else {
+          state = PEOPLE.map((_, p) => Array.isArray(val["p" + p]) ? val["p" + p] : []);
+          render();
+        }
+        setStatus("live", "🟢 Live — changes sync with everyone in real time");
+      }, (err) => {
+        setStatus("local", "🟡 Could not connect (" + err.code + ") — running locally");
+        dbRef = null;
+      });
+    } catch (e) {
+      setStatus("local", "🟡 Firebase config invalid — running locally");
+      dbRef = null;
+    }
+  } else {
+    setStatus("local", "🟡 Local only — add Firebase config to share votes live");
+  }
+
+  function pushPerson(p) { if (dbRef) dbRef.child("p" + p).set(state[p]); }
+  function pushAll() { if (dbRef) { const o = {}; state.forEach((l, p) => (o["p" + p] = l)); dbRef.set(o); } }
+
+  // --- Build table ----------------------------------------------------------
+  const table = document.getElementById("poll");
+
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+  hr.innerHTML = '<th class="corner">Participant</th>' +
+    COUNTRIES.map((c) => "<th>" + c + "</th>").join("") +
+    '<th class="totcol">Total</th>';
+  thead.appendChild(hr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  PEOPLE.forEach((person, p) => {
+    const tr = document.createElement("tr");
+
+    const nameTd = document.createElement("td");
+    nameTd.className = "name";
+    nameTd.textContent = person.name;
+    tr.appendChild(nameTd);
+
+    COUNTRIES.forEach((c) => {
+      const td = document.createElement("td");
+      td.className = "cell";
+      td.dataset.person = p;
+      td.dataset.country = c;
+      td.innerHTML = '<span class="badge"></span>';
+      td.addEventListener("click", () => toggle(p, c));
+      tr.appendChild(td);
+    });
+
+    const totTd = document.createElement("td");
+    totTd.className = "total";
+    totTd.id = "ptotal-" + p;
+    tr.appendChild(totTd);
+
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  const tfoot = document.createElement("tfoot");
+  const fr = document.createElement("tr");
+  fr.innerHTML = '<td class="label">Votes / country</td>' +
+    COUNTRIES.map((c) => '<td id="cc-' + cssId(c) + '"></td>').join("") +
+    '<td class="grand" id="grandTotal"></td>';
+  tfoot.appendChild(fr);
+  table.appendChild(tfoot);
+
+  function cssId(s) { return s.replace(/[^a-z0-9]/gi, "_"); }
+
+  // --- Logic ----------------------------------------------------------------
+  function toggle(p, country) {
+    if (VOTES_LOCKED) return; // votes are final
+    const list = state[p];
+    const idx = list.indexOf(country);
+    if (idx === -1) list.push(country); else list.splice(idx, 1);
+    render();
+    pushPerson(p); // sync this person's row to everyone
+  }
+
+  function render() {
+    let grandTotal = 0;
+    const countByCountry = {};
+    COUNTRIES.forEach((c) => (countByCountry[c] = 0));
+
+    state.forEach((list, p) => {
+      // Rank picks by column order (not click order) so prices don't depend
+      // on the order countries were selected. 2 picks always = $10 + $15 = $25.
+      const ordered = list.slice().sort((a, b) => COUNTRIES.indexOf(a) - COUNTRIES.indexOf(b));
+      const rankOf = {};
+      ordered.forEach((c, i) => (rankOf[c] = i + 1));
+
+      document
+        .querySelectorAll('td.cell[data-person="' + p + '"]')
+        .forEach((td) => {
+          const c = td.dataset.country;
+          const rank = rankOf[c] || 0;
+          const badge = td.querySelector(".badge");
+          if (rank > 0) {
+            td.classList.add("on");
+            badge.textContent = "✓";
+            countByCountry[c]++;
+          } else {
+            td.classList.remove("on");
+            badge.textContent = "";
+          }
+        });
+
+      let personTotal = 0;
+      ordered.forEach((_, i) => (personTotal += priceForRank(i + 1)));
+      document.getElementById("ptotal-" + p).textContent = "$" + personTotal;
+      grandTotal += personTotal;
+    });
+
+    COUNTRIES.forEach((c) => {
+      const n = countByCountry[c];
+      document.getElementById("cc-" + cssId(c)).innerHTML =
+        '<span class="cnt">' + n + '</span><span class="sub">vote' + (n === 1 ? "" : "s") + '</span>';
+    });
+    document.getElementById("grandTotal").textContent = "$" + grandTotal;
+    const hero = document.getElementById("heroTotal");
+    if (hero) hero.textContent = "$" + grandTotal;
+    if (document.getElementById("bracket")) updateBracketVoters();
+  }
+
+  // =========================================================================
+  //  KNOCKOUT BRACKET (FIFA World Cup 2026) — data as of June 28, 2026
+  //  Match 73 played: South Africa 0–1 Canada. All others upcoming.
+  // =========================================================================
+  const POLL_TEAMS = new Set(["Argentina","Brazil","Colombia","England","France","Germany","Spain","USA","United States"]);
+
+  // Bracket structure: Round of 32 teams are concrete; every later round
+  // references the winner of an earlier match via { ref: <matchNumber> }.
+  // Ordered top→bottom so each pair feeds the next round cleanly.
+  const R32 = [
+    { n: 74, teams: [{ name: "Germany" }, { name: "Paraguay" }] },
+    { n: 77, teams: [{ name: "France" }, { name: "Sweden" }] },
+    { n: 73, teams: [{ name: "South Africa" }, { name: "Canada" }] },
+    { n: 75, teams: [{ name: "Netherlands" }, { name: "Morocco" }] },
+    { n: 83, teams: [{ name: "Portugal" }, { name: "Croatia" }] },
+    { n: 84, teams: [{ name: "Spain" }, { name: "Austria" }] },
+    { n: 81, teams: [{ name: "United States" }, { name: "Bosnia & Herzegovina" }] },
+    { n: 82, teams: [{ name: "Belgium" }, { name: "Senegal" }] },
+    { n: 76, teams: [{ name: "Brazil" }, { name: "Japan" }] },
+    { n: 78, teams: [{ name: "Ivory Coast" }, { name: "Norway" }] },
+    { n: 79, teams: [{ name: "Mexico" }, { name: "Ecuador" }] },
+    { n: 80, teams: [{ name: "England" }, { name: "DR Congo" }] },
+    { n: 86, teams: [{ name: "Argentina" }, { name: "Cape Verde" }] },
+    { n: 88, teams: [{ name: "Australia" }, { name: "Egypt" }] },
+    { n: 85, teams: [{ name: "Switzerland" }, { name: "Algeria" }] },
+    { n: 87, teams: [{ name: "Colombia" }, { name: "Ghana" }] }
+  ];
+
+  const R16 = [
+    { n: 89, teams: [{ ref: 74 }, { ref: 77 }] },
+    { n: 90, teams: [{ ref: 73 }, { ref: 75 }] },
+    { n: 93, teams: [{ ref: 83 }, { ref: 84 }] },
+    { n: 94, teams: [{ ref: 81 }, { ref: 82 }] },
+    { n: 91, teams: [{ ref: 76 }, { ref: 78 }] },
+    { n: 92, teams: [{ ref: 79 }, { ref: 80 }] },
+    { n: 95, teams: [{ ref: 86 }, { ref: 88 }] },
+    { n: 96, teams: [{ ref: 85 }, { ref: 87 }] }
+  ];
+
+  const QF = [
+    { n: 97, teams: [{ ref: 89 }, { ref: 90 }] },
+    { n: 98, teams: [{ ref: 93 }, { ref: 94 }] },
+    { n: 99, teams: [{ ref: 91 }, { ref: 92 }] },
+    { n: 100, teams: [{ ref: 95 }, { ref: 96 }] }
+  ];
+
+  const SF = [
+    { n: 101, teams: [{ ref: 97 }, { ref: 98 }] },
+    { n: 102, teams: [{ ref: 99 }, { ref: 100 }] }
+  ];
+
+  const FINAL = [{ n: 103, teams: [{ ref: 101 }, { ref: 102 }] }];
+
+  // ===== RESULTS =====
+  // PREDICTED_WINNERS = our manual picks; shown until the real match is played.
+  // Live FIFA results (fetched below) overwrite these for any finished match,
+  // and the winner automatically advances into the next round.
+  const PREDICTED_WINNERS = {
+    73: "Canada", 74: "Germany", 75: "Netherlands", 76: "Brazil", 77: "France",
+    80: "England", 81: "United States", 83: "Portugal", 84: "Spain",
+    86: "Argentina", 87: "Colombia",
+    90: "Netherlands", 91: "Brazil", 92: "England", 93: "Spain",
+    94: "United States", 95: "Argentina", 96: "Colombia"
+  };
+  const WINNERS = Object.assign({}, PREDICTED_WINNERS); // live data merges in here
+  const SCORES = {}; // matchNumber -> [homeScore, awayScore], filled from live data
+  const LIVE = new Set(); // match numbers currently in progress
+
+  // Match dates (2026)
+  const DATES = {
+    73: "Jun 28", 74: "Jun 29", 75: "Jun 29", 76: "Jun 29",
+    77: "Jun 30", 78: "Jun 30", 79: "Jun 30",
+    80: "Jul 1", 81: "Jul 1", 82: "Jul 1",
+    83: "Jul 2", 84: "Jul 2", 85: "Jul 2",
+    86: "Jul 3", 87: "Jul 3", 88: "Jul 3",
+    89: "Jul 4", 90: "Jul 4", 91: "Jul 5", 92: "Jul 5",
+    93: "Jul 6", 94: "Jul 6", 95: "Jul 7", 96: "Jul 7",
+    97: "Jul 9", 98: "Jul 10", 99: "Jul 11", 100: "Jul 11",
+    101: "Jul 14", 102: "Jul 15", 103: "Jul 19"
+  };
+
+  const ROUNDS = [
+    { title: "Round of 32", matches: R32 },
+    { title: "Round of 16", matches: R16 },
+    { title: "Quarter-finals", matches: QF },
+    { title: "Semi-finals", matches: SF },
+    { title: "Final", matches: FINAL }
+  ];
+
+  // Country names in the bracket use "United States"; the poll uses "USA".
+  function pollKey(name) { return name === "United States" ? "USA" : name; }
+
+  // Resolve a slot to a concrete team: a ref becomes the recorded winner of
+  // that match (or null if not yet played); a named slot stays as-is.
+  function resolveName(t) { return t.ref ? (WINNERS[t.ref] || null) : t.name; }
+
+  function teamRow(t, match, idx) {
+    const div = document.createElement("div");
+    div.className = "team";
+
+    const left = document.createElement("span");
+    left.className = "tleft";
+    const nm = document.createElement("span");
+    nm.className = "nm";
+
+    const name = resolveName(t);
+    if (name == null) {
+      nm.textContent = "Winner M" + t.ref;
+      div.classList.add("tbd");
+    } else {
+      nm.textContent = name;
+      if (POLL_TEAMS.has(name)) div.classList.add("poll");
+      if (WINNERS[match.n] === name) div.classList.add("win"); // won this match
+    }
+    left.appendChild(nm);
+
+    if (name != null) {
+      const voters = document.createElement("span");
+      voters.className = "voters";
+      voters.dataset.country = pollKey(name);
+      left.appendChild(voters);
+    }
+    div.appendChild(left);
+
+    const sc = SCORES[match.n];
+    if (sc && name != null && sc[idx] !== undefined) {
+      const scEl = document.createElement("span");
+      scEl.className = "sc";
+      scEl.textContent = sc[idx];
+      div.appendChild(scEl);
+    }
+    return div;
+  }
+
+  // A distinct color per participant (by index in PEOPLE).
+  const VOTER_COLORS = [
+    "#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4",
+    "#008080", "#f032e6", "#9a6324", "#e8b923", "#46c2c2"
+  ];
+
+  // Fill each bracket country with circles showing the initials of who voted for it.
+  function updateBracketVoters() {
+    const voters = {};
+    state.forEach((list, p) => {
+      const person = PEOPLE[p];
+      const ini = (person.initial || person.name.charAt(0)).toUpperCase();
+      const color = VOTER_COLORS[p % VOTER_COLORS.length];
+      list.forEach((c) => { (voters[c] = voters[c] || []).push({ name: person.name, ini: ini, color: color }); });
+    });
+    document.querySelectorAll("#bracket .voters").forEach((el) => {
+      const arr = voters[el.dataset.country] || [];
+      el.innerHTML = arr
+        .map((v) => '<span class="vchip" title="' + v.name + '" style="background:' + v.color + '">' + v.ini + "</span>")
+        .join("");
+    });
+  }
+
+  function buildBracket() {
+    const bracket = document.getElementById("bracket");
+    bracket.innerHTML = ""; // clear so it can be rebuilt when live results arrive
+    ROUNDS.forEach((round) => {
+      const col = document.createElement("div");
+      col.className = "round";
+      const title = document.createElement("div");
+      title.className = "round-title";
+      title.textContent = round.title;
+      const body = document.createElement("div");
+      body.className = "round-body";
+      round.matches.forEach((m) => {
+        const box = document.createElement("div");
+        box.className = "match" + (LIVE.has(m.n) ? " live-match" : "");
+        const num = document.createElement("div");
+        num.className = "mnum";
+        num.textContent = "Match " + m.n + (DATES[m.n] ? " · " + DATES[m.n] : "");
+        if (LIVE.has(m.n)) {
+          const tag = document.createElement("span");
+          tag.className = "live-tag";
+          tag.textContent = "● LIVE";
+          num.appendChild(tag);
+        }
+        box.appendChild(num);
+        m.teams.forEach((t, idx) => box.appendChild(teamRow(t, m, idx)));
+        body.appendChild(box);
+      });
+      col.appendChild(title);
+      col.appendChild(body);
+      bracket.appendChild(col);
+    });
+  }
+  buildBracket();
+  updateBracketVoters();
+
+  // =========================================================================
+  //  LIVE SYNC with FIFA World Cup 2026 results (worldcup26.ir, no key needed).
+  //  Match "id" matches our bracket match numbers. When a match is finished,
+  //  the real winner overwrites the prediction and advances automatically.
+  // =========================================================================
+  const LIVE_URL = "https://worldcup26.ir/get/games";
+
+  function applyLiveResults(games) {
+    LIVE.clear();
+    games.forEach((m) => {
+      const id = parseInt(m.id, 10);
+      if (!id) return;
+      const hs = parseInt(m.home_score, 10);
+      const as = parseInt(m.away_score, 10);
+      const haveScore = !isNaN(hs) && !isNaN(as);
+      const done = m.finished === "TRUE" || m.time_elapsed === "finished";
+      const live = m.time_elapsed === "live" || m.time_elapsed === "inprogress";
+
+      if (live) LIVE.add(id);
+      if (haveScore && (done || live)) SCORES[id] = [hs, as];
+
+      if (done && haveScore && hs !== as) {
+        // Real result → overwrite prediction; the winner advances via {ref}.
+        WINNERS[id] = hs > as ? m.home_team_name_en : m.away_team_name_en;
+      }
+      // Ties at full time (decided on penalties) are left as the prediction,
+      // since the shootout winner isn't derivable from the score alone.
+    });
+  }
+
+  function setBracketNote(text) {
+    const note = document.getElementById("bracketNote");
+    if (note) note.textContent = text;
+  }
+
+  const FAST_MS = 30000;   // refresh every 30s while a match is in progress
+  const SLOW_MS = 120000;  // otherwise every 2 minutes
+
+  function scheduleNext() {
+    setTimeout(refreshLive, LIVE.size > 0 ? FAST_MS : SLOW_MS);
+  }
+
+  function refreshLive() {
+    fetch(LIVE_URL)
+      .then((r) => r.json())
+      .then((data) => {
+        const games = Array.isArray(data) ? data : (data.games || data.data || []);
+        if (!games.length) throw new Error("no games");
+        applyLiveResults(games);
+        buildBracket();
+        updateBracketVoters();
+        const live = LIVE.size > 0 ? " · " + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE" : "";
+        setBracketNote("🟢 Live results synced" + live + " · Round of 32 → Final (Jul 19)");
+      })
+      .catch(() => {
+        setBracketNote("Showing predictions — live results unavailable · Round of 32 → Final");
+      })
+      .finally(scheduleNext); // speeds up to 30s when matches are live
+  }
+  refreshLive();
+
+  // When votes are locked, make the table read-only.
+  if (VOTES_LOCKED) {
+    document.getElementById("resetBtn").style.display = "none";
+    document.querySelectorAll("td.cell").forEach((td) => (td.style.cursor = "default"));
+    const sub = document.querySelector("header p");
+    if (sub) sub.textContent = "Votes are final · totals locked";
+  }
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    if (!confirm("Reset everyone's votes to the original picks?")) return;
+    state = PEOPLE.map((person) => person.picks.slice());
+    render();
+    pushAll();
+  });
+
+  render();
+</script>
+</body>
+</html>
