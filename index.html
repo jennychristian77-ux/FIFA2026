@@ -304,16 +304,16 @@
   ];
 
   const PEOPLE = [
-    { name: "Pina",    picks: ["Argentina"] },
-    { name: "Wilson",  picks: ["Argentina"] },
-    { name: "Sandy",   picks: ["Argentina", "Germany"], initial: "SG" },
     { name: "Ila",     picks: ["Argentina"] },
-    { name: "Silas",   picks: ["France", "England"], initial: "G" },
     { name: "Jay",     picks: ["France", "USA"] },
+    { name: "Sandy",   picks: ["Argentina", "Germany"], initial: "SG" },
+    { name: "Silas",   picks: ["France", "England"], initial: "G" },
     { name: "Minesh",  picks: ["France", "Colombia"] },
+    { name: "Pina",    picks: ["Argentina"] },
     { name: "Nilpa",   picks: ["USA"] },
+    { name: "Ruzwalt", picks: ["Brazil"] },
     { name: "Smita",   picks: ["Spain"], initial: "SC" },
-    { name: "Ruzwalt", picks: ["Brazil"] }
+    { name: "Wilson",  picks: ["Argentina"] }
   ];
 
   // state[personIndex] = ordered array of selected country names
@@ -342,7 +342,11 @@
           // First ever load → seed the database with the original votes
           pushAll();
         } else {
-          state = PEOPLE.map((_, p) => Array.isArray(val["p" + p]) ? val["p" + p] : []);
+          // When votes are locked, the PEOPLE list is authoritative — ignore the
+          // stored index-keyed data (which would no longer match a reordered list).
+          if (!VOTES_LOCKED) {
+            state = PEOPLE.map((_, p) => Array.isArray(val["p" + p]) ? val["p" + p] : []);
+          }
           render();
         }
         setStatus("live", "🟢 Live — changes sync with everyone in real time");
