@@ -571,6 +571,15 @@
     101: "Jul 14", 102: "Jul 15", 103: "Jul 19"
   };
 
+  // Date + kick-off time, filled live from the feed's local_date ("MM/DD/YYYY HH:MM").
+  const MATCH_DT = {};
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function fmtDateTime(s) {
+    const m = /^(\d{1,2})\/(\d{1,2})\/\d{4}\s+(\d{1,2}):(\d{2})/.exec(s || "");
+    if (!m) return null;
+    return MONTHS[parseInt(m[1], 10) - 1] + " " + parseInt(m[2], 10) + " · " + m[3] + ":" + m[4];
+  }
+
   const ROUNDS = [
     { title: "Round of 32", matches: R32 },
     { title: "Round of 16", matches: R16 },
@@ -728,7 +737,8 @@
         box.className = "match" + (LIVE.has(m.n) ? " live-match" : "");
         const num = document.createElement("div");
         num.className = "mnum";
-        num.textContent = "Match " + m.n + (DATES[m.n] ? " · " + DATES[m.n] : "");
+        var when = MATCH_DT[m.n] || DATES[m.n];
+        num.textContent = "Match " + m.n + (when ? " · " + when : "");
         if (LIVE.has(m.n)) {
           const tag = document.createElement("span");
           tag.className = "live-tag";
@@ -767,6 +777,8 @@
       const id = parseInt(m.id, 10);
       if (!id) return;
       if (id < 73) return; // only knockout matches (73+) affect the bracket & eliminations
+      const dt = fmtDateTime(m.local_date);
+      if (dt) MATCH_DT[id] = dt;
       const hs = parseInt(m.home_score, 10);
       const as = parseInt(m.away_score, 10);
       const hp = parseInt(m.home_penalty_score, 10);
