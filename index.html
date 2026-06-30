@@ -176,6 +176,12 @@
     70%  { box-shadow: 0 0 0 9px rgba(245,185,33,0); }
     100% { box-shadow: 0 0 0 0 rgba(245,185,33,0); }
   }
+  .match.today { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(245,185,33,.30), 0 4px 14px rgba(0,0,0,.22); }
+  .match.today .mnum { color: var(--gold); font-weight: 700; }
+  .today-tag {
+    font-size: 8px; font-weight: 800; letter-spacing: .5px; margin-left: 6px;
+    color: #0b0f14; background: var(--gold); border-radius: 4px; padding: 1px 5px;
+  }
   .match.live-match { border-color: var(--gold); animation: matchPulse 1.5s infinite; }
   .match.live-match .mnum { color: var(--gold); font-weight: 700; }
   .live-tag {
@@ -578,12 +584,23 @@
   };
 
   // Date + kick-off time, filled live from the feed's local_date ("MM/DD/YYYY HH:MM").
-  const MATCH_DT = {};
+  const MATCH_DT = {};   // matchNumber -> "Jun 29 · 16:30"
+  const MATCH_DATE = {}; // matchNumber -> "2026-06-29" (for "is it today?")
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   function fmtDateTime(s) {
     const m = /^(\d{1,2})\/(\d{1,2})\/\d{4}\s+(\d{1,2}):(\d{2})/.exec(s || "");
     if (!m) return null;
     return MONTHS[parseInt(m[1], 10) - 1] + " " + parseInt(m[2], 10) + " · " + m[3] + ":" + m[4];
+  }
+  function isoDate(s) {
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s || "");
+    if (!m) return null;
+    var p = function (n) { return ("0" + n).slice(-2); };
+    return m[3] + "-" + p(m[1]) + "-" + p(m[2]);
+  }
+  function todayISO() {
+    var d = new Date(), p = function (n) { return ("0" + n).slice(-2); };
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
   }
 
   const ROUNDS = [
@@ -730,6 +747,7 @@
   function buildBracket() {
     const bracket = document.getElementById("bracket");
     bracket.innerHTML = ""; // clear so it can be rebuilt when live results arrive
+    const TODAY = todayISO();
     ROUNDS.forEach((round) => {
       const col = document.createElement("div");
       col.className = "round";
@@ -739,8 +757,9 @@
       const body = document.createElement("div");
       body.className = "round-body";
       round.matches.forEach((m) => {
+        const isToday = !!MATCH_DATE[m.n] && MATCH_DATE[m.n] === TODAY;
         const box = document.createElement("div");
-        box.className = "match" + (LIVE.has(m.n) ? " live-match" : "");
+        box.className = "match" + (LIVE.has(m.n) ? " live-match" : "") + (isToday ? " today" : "");
         const num = document.createElement("div");
         num.className = "mnum";
         var when = MATCH_DT[m.n] || DATES[m.n];
@@ -749,6 +768,11 @@
           const tag = document.createElement("span");
           tag.className = "live-tag";
           tag.textContent = "● LIVE";
+          num.appendChild(tag);
+        } else if (isToday) {
+          const tag = document.createElement("span");
+          tag.className = "today-tag";
+          tag.textContent = "TODAY";
           num.appendChild(tag);
         }
         box.appendChild(num);
@@ -785,6 +809,8 @@
       if (id < 73) return; // only knockout matches (73+) affect the bracket & eliminations
       const dt = fmtDateTime(m.local_date);
       if (dt) MATCH_DT[id] = dt;
+      const iso = isoDate(m.local_date);
+      if (iso) MATCH_DATE[id] = iso;
       const hs = parseInt(m.home_score, 10);
       const as = parseInt(m.away_score, 10);
       const hp = parseInt(m.home_penalty_score, 10);
