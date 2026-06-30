@@ -200,6 +200,7 @@
     color: var(--muted); font-size: 12px; padding-top: 18px;
     border-top: 1px solid var(--line);
   }
+  .visit-stats { margin-top: 8px; color: var(--gold); font-weight: 700; font-size: 12px; }
 
   /* collapsible poll panel */
   .panel {
@@ -304,6 +305,7 @@
 
   <footer class="site-footer">
     ⚽ FIFA World Cup 2026 · Live results from worldcup26.ir · Final at MetLife Stadium, Jul 19
+    <div class="visit-stats" id="visitStats">👀 …</div>
   </footer>
 
 <!-- Firebase SDK (loads only if you fill in the config below) -->
@@ -387,6 +389,35 @@
         setStatus("local", "🟡 Could not connect (" + err.code + ") — running locally");
         dbRef = null;
       });
+
+      // --- Anonymous visit tracking (Option B) ------------------------------
+      try {
+        const visitsRef = firebase.database().ref("polls/fifa2026/visits");
+        let vid = null;
+        try { vid = localStorage.getItem("fifa_vid"); } catch (e) {}
+        const isNew = !vid;
+        if (!vid) {
+          vid = "v" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          try { localStorage.setItem("fifa_vid", vid); } catch (e) {}
+        }
+        // counters
+        visitsRef.child("views").transaction(function (n) { return (n || 0) + 1; });
+        if (isNew) visitsRef.child("uniques").transaction(function (n) { return (n || 0) + 1; });
+        // per-visit log (timestamp + browser + anonymous id)
+        visitsRef.child("log").push({
+          t: firebase.database.ServerValue.TIMESTAMP,
+          vid: vid,
+          ua: (navigator.userAgent || "").slice(0, 180)
+        });
+        // live display at the bottom
+        let views = 0, uniques = 0;
+        const showVisits = function () {
+          const el = document.getElementById("visitStats");
+          if (el) el.textContent = "👀 " + views.toLocaleString() + " views · " + uniques.toLocaleString() + " visitors";
+        };
+        visitsRef.child("views").on("value", function (s) { views = s.val() || 0; showVisits(); });
+        visitsRef.child("uniques").on("value", function (s) { uniques = s.val() || 0; showVisits(); });
+      } catch (e) {}
     } catch (e) {
       setStatus("local", "🟡 Firebase config invalid — running locally");
       dbRef = null;
