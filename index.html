@@ -697,6 +697,9 @@
     LIVE.clear();
     ELIMINATED.clear();
     ACTUAL.clear();
+    // Rebuild winners from the predictions each refresh, then layer real results on top.
+    Object.keys(WINNERS).forEach((k) => delete WINNERS[k]);
+    Object.assign(WINNERS, PREDICTED_WINNERS);
     games.forEach((m) => {
       const id = parseInt(m.id, 10);
       if (!id) return;
@@ -729,6 +732,13 @@
         }
       }
       // A draw still awaiting its shootout result stays as the prediction.
+    });
+
+    // Drop any *prediction* whose team is already eliminated — a knocked-out team
+    // can't win a future game, so that slot reverts to "Winner M__".
+    Object.keys(WINNERS).forEach((k) => {
+      const mid = parseInt(k, 10);
+      if (!ACTUAL.has(mid) && ELIMINATED.has(pollKey(WINNERS[k]))) delete WINNERS[k];
     });
   }
 
