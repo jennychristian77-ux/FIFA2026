@@ -263,7 +263,7 @@
       <span class="ball">⚽</span>
     </div>
     <h2>🏆 Knockout Bracket</h2>
-    <p class="bracket-note" id="bracketNote">Remaining games · Round of 32 → Final (MetLife Stadium, July 19)</p>
+    <p class="bracket-note" id="bracketNote">Remaining games</p>
   </header>
 
   <section class="bracket-section">
@@ -945,10 +945,10 @@
         renderStandings();
         renderWinChances();
         const live = LIVE.size > 0 ? " · " + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE" : "";
-        setBracketNote("🟢 Live results synced" + live + " · Round of 32 → Final (Jul 19)");
+        setBracketNote("🟢 Live results synced" + live);
       })
       .catch(() => {
-        setBracketNote("Showing predictions — live results unavailable · Round of 32 → Final");
+        setBracketNote("Showing predictions — live results unavailable");
       })
       .finally(scheduleNext); // speeds up to 30s when matches are live
   }
