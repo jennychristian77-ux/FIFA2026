@@ -167,7 +167,12 @@
     min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px;
     background: #3a7bd5; color: #fff; font-size: 9px; font-weight: 700;
     display: inline-flex; align-items: center; justify-content: center;
-    cursor: default;
+    cursor: pointer;
+  }
+  .vchip-tip {
+    position: absolute; z-index: 1000; color: #fff; font-size: 12px; font-weight: 700;
+    padding: 5px 10px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.45);
+    transform: translateX(-50%); white-space: nowrap; pointer-events: none;
   }
 
   /* live (in-progress) match pulse */
@@ -791,6 +796,31 @@
   updateBracketVoters();
   renderStandings();
   renderWinChances();
+
+  // Tap/click a voter initial in the bracket to show the full name (no hover on phones).
+  (function () {
+    const tip = document.createElement("div");
+    tip.className = "vchip-tip";
+    tip.style.display = "none";
+    document.body.appendChild(tip);
+    let hideT = null;
+    document.addEventListener("click", function (e) {
+      const chip = e.target.closest ? e.target.closest(".vchip") : null;
+      if (chip && chip.closest("#bracket")) {
+        e.stopPropagation();
+        tip.textContent = chip.getAttribute("title") || chip.textContent;
+        tip.style.background = chip.style.background || "#333";
+        tip.style.display = "block";
+        const r = chip.getBoundingClientRect();
+        tip.style.left = (r.left + window.scrollX + r.width / 2) + "px";
+        tip.style.top = Math.max(window.scrollY + 4, r.top + window.scrollY - tip.offsetHeight - 8) + "px";
+        clearTimeout(hideT);
+        hideT = setTimeout(function () { tip.style.display = "none"; }, 2200);
+      } else {
+        tip.style.display = "none";
+      }
+    });
+  })();
 
   // =========================================================================
   //  LIVE SYNC with FIFA World Cup 2026 results (worldcup26.ir, no key needed).
