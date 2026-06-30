@@ -51,6 +51,7 @@
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
   .hero .sub { color: var(--muted); margin: 0; font-size: 14px; }
+  .hero h2 { margin: 10px 0 6px; font-size: 19px; font-weight: 700; color: var(--text); }
   .hero .badges { margin-top: 16px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .badge-chip {
     display: inline-flex; align-items: center; gap: 8px;
@@ -128,7 +129,7 @@
   .actions button:hover { border-color: var(--green); }
 
   /* --- Knockout bracket --- */
-  .bracket-section { max-width: 1250px; margin: 40px auto 0; }
+  .bracket-section { max-width: 1250px; margin: 0 auto; }
   .bracket-section h2 { text-align: center; font-size: 22px; margin: 0 0 4px; }
   .bracket-note { text-align: center; color: var(--muted); font-size: 13px; margin: 0 0 6px; }
   .legend { display: flex; gap: 16px; justify-content: center; font-size: 12px; color: var(--muted); margin-bottom: 16px; flex-wrap: wrap; }
@@ -249,7 +250,18 @@
 <body>
   <header class="hero">
     <h1>FIFA World Cup 2026</h1>
+    <h2>🏆 Knockout Bracket</h2>
+    <p class="bracket-note" id="bracketNote">Remaining games · Round of 32 → Final (MetLife Stadium, July 19)</p>
+    <div class="legend">
+      <span><i class="swatch poll"></i> Your poll country</span>
+      <span><i class="swatch win"></i> Won / advanced</span>
+      <span><i class="swatch pred"></i> Predicted</span>
+    </div>
   </header>
+
+  <section class="bracket-section">
+    <div class="bracket" id="bracket"></div>
+  </section>
 
   <details class="panel">
     <summary>Still in Contention <span class="names-preview" id="standingsNames"></span></summary>
@@ -258,17 +270,6 @@
       <div class="standings" id="standings"></div>
     </div>
   </details>
-
-  <section class="bracket-section">
-    <h2>🏆 Knockout Bracket</h2>
-    <p class="bracket-note" id="bracketNote">Remaining games · Round of 32 → Final (MetLife Stadium, July 19)</p>
-    <div class="legend">
-      <span><i class="swatch poll"></i> Your poll country</span>
-      <span><i class="swatch win"></i> Won / advanced</span>
-      <span><i class="swatch pred"></i> Predicted</span>
-    </div>
-    <div class="bracket" id="bracket"></div>
-  </section>
 
   <details class="panel">
     <summary>Win Chances <span class="hint">FIFA-weighted · click to expand</span></summary>
