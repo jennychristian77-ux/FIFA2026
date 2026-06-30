@@ -583,18 +583,19 @@
   function pollKey(name) { return name === "United States" ? "USA" : name; }
 
   // ===== Win-chance simulation (FIFA-ranking weighted) =====================
-  // Approximate FIFA ranking points (late 2025) for the teams in the bracket.
+  // Official FIFA ranking points (FIFA/Coca-Cola Men's Ranking, June 11 2026).
+  // The four teams marked * are outside the published top 50 — close estimates.
   const RANKINGS = {
-    "Argentina": 1885, "Spain": 1875, "France": 1862, "England": 1820,
-    "Portugal": 1778, "Brazil": 1769, "Netherlands": 1754, "Belgium": 1740,
-    "Germany": 1724, "Croatia": 1708, "Morocco": 1694, "Colombia": 1692,
-    "United States": 1665, "USA": 1665, "Mexico": 1655, "Japan": 1652,
-    "Switzerland": 1648, "Senegal": 1630, "Sweden": 1588, "Austria": 1578,
-    "Ecuador": 1570, "Norway": 1532, "Canada": 1531, "Egypt": 1512,
-    "Australia": 1503, "Algeria": 1500, "Ivory Coast": 1485, "Paraguay": 1452,
-    "South Africa": 1430, "DR Congo": 1432, "Democratic Republic of the Congo": 1432,
-    "Bosnia & Herzegovina": 1428, "Bosnia and Herzegovina": 1428,
-    "Ghana": 1420, "Cape Verde": 1380
+    "Argentina": 1877.27, "Spain": 1874.71, "France": 1870.70, "England": 1828.02,
+    "Portugal": 1767.85, "Brazil": 1765.86, "Morocco": 1755.10, "Netherlands": 1753.57,
+    "Belgium": 1742.24, "Germany": 1735.77, "Croatia": 1714.87, "Colombia": 1698.35,
+    "Mexico": 1687.48, "Senegal": 1684.07, "United States": 1671.23, "USA": 1671.23,
+    "Japan": 1661.58, "Switzerland": 1650.06, "Austria": 1598.82, "Norway": 1594.04,
+    "Ecuador": 1592.59, "Egypt": 1584.71, "Australia": 1581.35, "Algeria": 1576.80,
+    "Canada": 1571.34, "Ivory Coast": 1565.48, "Sweden": 1525.58, "Paraguay": 1520.59,
+    "DR Congo": 1495.48, "Democratic Republic of the Congo": 1495.48,
+    "Bosnia & Herzegovina": 1440, "Bosnia and Herzegovina": 1440, // *
+    "South Africa": 1435, "Ghana": 1430, "Cape Verde": 1390       // *
   };
   function rankOf(name) { return RANKINGS[name] != null ? RANKINGS[name] : 1500; }
   function pairwise(a, b) { return 1 / (1 + Math.pow(10, (rankOf(b) - rankOf(a)) / 400)); }
