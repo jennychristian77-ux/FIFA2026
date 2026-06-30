@@ -279,7 +279,7 @@
   </details>
 
   <details class="panel">
-    <summary>Win Chances <span class="hint">FIFA-weighted · click to expand</span></summary>
+    <summary>Win Chances <span class="hint">by bracket position · click to expand</span></summary>
     <div class="panel-body">
       <div class="winchances" id="winChances"></div>
     </div>
@@ -630,7 +630,10 @@
     "South Africa": 1435, "Ghana": 1430, "Cape Verde": 1390       // *
   };
   function rankOf(name) { return RANKINGS[name] != null ? RANKINGS[name] : 1500; }
-  function pairwise(a, b) { return 1 / (1 + Math.pow(10, (rankOf(b) - rankOf(a)) / 400)); }
+  // Win chances are based purely on bracket position: every remaining knockout
+  // match is a 50/50 coin flip, so a team's title chance = 0.5 ^ (rounds left).
+  // (RANKINGS kept above in case we re-enable FIFA weighting later.)
+  function pairwise(a, b) { return 0.5; }
 
   const MATCH_BY_N = {};
   ROUNDS.forEach((r) => r.matches.forEach((m) => (MATCH_BY_N[m.n] = m)));
