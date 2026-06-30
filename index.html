@@ -212,6 +212,7 @@
     border-top: 1px solid var(--line);
   }
   .visit-stats { margin-top: 8px; color: var(--gold); font-weight: 700; font-size: 12px; }
+  .visit-stats .online-now { color: #8be0a4; }
 
   /* collapsible poll panel */
   .panel {
@@ -420,12 +421,25 @@
           vid: vid,
           ua: (navigator.userAgent || "").slice(0, 180)
         });
+        // presence: register this session as "online" and auto-remove on disconnect
+        const onlineRef = visitsRef.child("online");
+        const myConn = onlineRef.push();
+        firebase.database().ref(".info/connected").on("value", function (snap) {
+          if (snap.val() === true) {
+            myConn.onDisconnect().remove();
+            myConn.set(firebase.database.ServerValue.TIMESTAMP);
+          }
+        });
+
         // live display at the bottom
-        let views = 0, uniques = 0;
+        let views = 0, uniques = 0, online = 0;
         const showVisits = function () {
           const el = document.getElementById("visitStats");
-          if (el) el.textContent = "👀 " + views.toLocaleString() + " views · " + uniques.toLocaleString() + " visitors";
+          if (el) el.innerHTML =
+            '<span class="online-now"><span class="live-dot-pulse"></span>' + online.toLocaleString() + " online now</span>" +
+            " · 👀 " + views.toLocaleString() + " views · " + uniques.toLocaleString() + " visitors";
         };
+        onlineRef.on("value", function (s) { online = s.numChildren() || 0; showVisits(); });
         visitsRef.child("views").on("value", function (s) { views = s.val() || 0; showVisits(); });
         visitsRef.child("uniques").on("value", function (s) { uniques = s.val() || 0; showVisits(); });
       } catch (e) {}
