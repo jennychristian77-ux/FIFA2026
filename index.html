@@ -65,11 +65,7 @@
   /* Win Chances */
   .wc-section { max-width: 1200px; margin: 0 auto; }
   .wc-sub { text-transform: none; letter-spacing: normal; font-weight: 500; color: var(--muted); font-size: 11px; margin-left: 8px; }
-  .winchances {
-    display: flex; flex-direction: column; gap: 8px;
-    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-    box-shadow: var(--shadow); padding: 16px 18px;
-  }
+  .winchances { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px; }
   .wc-row { display: flex; align-items: center; gap: 12px; }
   .wc-name { width: 160px; flex: 0 0 auto; font-weight: 700; font-size: 13px; }
   .wc-name small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; }
@@ -263,11 +259,6 @@
     </div>
   </details>
 
-  <section class="wc-section">
-    <div class="section-title">Win Chances <span class="wc-sub">FIFA-weighted · chance your pick wins the cup</span></div>
-    <div class="winchances" id="winChances"></div>
-  </section>
-
   <section class="bracket-section">
     <h2>🏆 Knockout Bracket</h2>
     <p class="bracket-note" id="bracketNote">Remaining games · Round of 32 → Final (MetLife Stadium, July 19)</p>
@@ -278,6 +269,13 @@
     </div>
     <div class="bracket" id="bracket"></div>
   </section>
+
+  <details class="panel">
+    <summary>Win Chances <span class="hint">FIFA-weighted · click to expand</span></summary>
+    <div class="panel-body">
+      <div class="winchances" id="winChances"></div>
+    </div>
+  </details>
 
   <details class="panel">
     <summary>Poll Selections <span class="hint">click to expand</span></summary>
