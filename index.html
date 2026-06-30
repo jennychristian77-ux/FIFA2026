@@ -139,6 +139,7 @@
     background: var(--green); margin-right: 7px; vertical-align: middle;
     animation: blink 1.1s steps(1) infinite;
   }
+  .live-chips { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: middle; }
   .legend { display: flex; gap: 16px; justify-content: center; font-size: 12px; color: var(--muted); margin-bottom: 16px; flex-wrap: wrap; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
@@ -613,6 +614,7 @@
   const SCORES = {}; // matchNumber -> [homeScore, awayScore], filled from live data
   const PENS = {};   // matchNumber -> [homePens, awayPens] for shootouts
   const LIVE = new Set(); // match numbers currently in progress
+  const LIVE_TEAMS = new Set(); // poll-key country names currently in a live match
   const ELIMINATED = new Set(); // poll-country names knocked out (from real results)
   const ACTUAL = new Set();     // match numbers with a real, played result (not a prediction)
   const FINISHED = new Set();   // match numbers that have finished (incl. draws→pens)
@@ -884,7 +886,7 @@
     let hideT = null;
     document.addEventListener("click", function (e) {
       const chip = e.target.closest ? e.target.closest(".vchip") : null;
-      if (chip && chip.closest("#bracket")) {
+      if (chip && chip.getAttribute("title")) {
         e.stopPropagation();
         tip.textContent = chip.getAttribute("title") || chip.textContent;
         tip.style.background = chip.style.background || "#333";
@@ -909,6 +911,7 @@
 
   function applyLiveResults(games) {
     LIVE.clear();
+    LIVE_TEAMS.clear();
     ELIMINATED.clear();
     ACTUAL.clear();
     FINISHED.clear();
@@ -935,7 +938,11 @@
       const done = m.finished === "TRUE" || te === "finished";
       const live = te === "live" || te === "inprogress";
 
-      if (live) LIVE.add(id);
+      if (live) {
+        LIVE.add(id);
+        LIVE_TEAMS.add(pollKey(m.home_team_name_en));
+        LIVE_TEAMS.add(pollKey(m.away_team_name_en));
+      }
       if (done) FINISHED.add(id);
       if (haveScore && (done || live)) SCORES[id] = [hs, as];
       if (havePens) PENS[id] = [hp, ap];
@@ -967,6 +974,20 @@
   function setBracketNote(html) {
     const note = document.getElementById("bracketNote");
     if (note) note.innerHTML = html;
+  }
+
+  // Colored initials of contestants whose picked team is in a live match.
+  function liveContestantChips() {
+    let html = "";
+    PEOPLE.forEach(function (person, p) {
+      const picks = state[p] || [];
+      if (picks.some(function (c) { return LIVE_TEAMS.has(c); })) {
+        const ini = (person.initial || person.name.charAt(0)).toUpperCase();
+        const color = VOTER_COLORS[p % VOTER_COLORS.length];
+        html += '<span class="vchip" style="background:' + color + '" title="' + person.name + '">' + ini + "</span>";
+      }
+    });
+    return html;
   }
 
 
@@ -1057,7 +1078,9 @@
         renderStandings();
         renderWinChances();
         if (LIVE.size > 0) {
-          setBracketNote('<span class="live-dot-pulse"></span>' + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE");
+          const chips = liveContestantChips();
+          setBracketNote('<span class="live-dot-pulse"></span>' + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE" +
+            (chips ? ' <span class="live-chips">' + chips + "</span>" : ""));
         } else {
           setBracketNote("");
         }
