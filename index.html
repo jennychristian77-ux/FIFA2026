@@ -448,9 +448,17 @@
           vid = "v" + Math.random().toString(36).slice(2) + Date.now().toString(36);
           try { localStorage.setItem("fifa_vid", vid); } catch (e) {}
         }
-        // counters
-        visitsRef.child("views").transaction(function (n) { return (n || 0) + 1; });
-        if (isNew) visitsRef.child("uniques").transaction(function (n) { return (n || 0) + 1; });
+        // TODAY's counters (per calendar day)
+        const dayKey = todayISO();
+        const dayRef = visitsRef.child("daily").child(dayKey);
+        dayRef.child("views").transaction(function (n) { return (n || 0) + 1; });
+        // count this visitor once per day
+        let lastDay = null;
+        try { lastDay = localStorage.getItem("fifa_day"); } catch (e) {}
+        if (lastDay !== dayKey) {
+          dayRef.child("visitors").transaction(function (n) { return (n || 0) + 1; });
+          try { localStorage.setItem("fifa_day", dayKey); } catch (e) {}
+        }
         // per-visit log (timestamp + browser + anonymous id)
         visitsRef.child("log").push({
           t: firebase.database.ServerValue.TIMESTAMP,
@@ -467,17 +475,17 @@
           }
         });
 
-        // live display at the bottom
-        let views = 0, uniques = 0, online = 0;
+        // live display at the bottom — today's numbers + who's online now
+        let views = 0, visitors = 0, online = 0;
         const showVisits = function () {
           const el = document.getElementById("visitStats");
           if (el) el.innerHTML =
             '<span class="online-now"><span class="live-dot-pulse"></span>' + online.toLocaleString() + " online now</span>" +
-            " · 👀 " + views.toLocaleString() + " views · " + uniques.toLocaleString() + " visitors";
+            " · 👀 " + views.toLocaleString() + " views today · " + visitors.toLocaleString() + " visitors today";
         };
         onlineRef.on("value", function (s) { online = s.numChildren() || 0; showVisits(); });
-        visitsRef.child("views").on("value", function (s) { views = s.val() || 0; showVisits(); });
-        visitsRef.child("uniques").on("value", function (s) { uniques = s.val() || 0; showVisits(); });
+        dayRef.child("views").on("value", function (s) { views = s.val() || 0; showVisits(); });
+        dayRef.child("visitors").on("value", function (s) { visitors = s.val() || 0; showVisits(); });
       } catch (e) {}
     } catch (e) {
       setStatus("local", "🟡 Firebase config invalid — running locally");
