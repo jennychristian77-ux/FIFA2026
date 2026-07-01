@@ -1114,9 +1114,11 @@
     const toBracket = { USA: "United States" };
     const rows = PEOPLE.map((person, p) => {
       const picks = state[p] || [];
-      const prob = picks.reduce((s, c) => s + (champ[toBracket[c] || c] || 0), 0);
-      return { name: person.name, picks: picks, prob: prob };
-    });
+      // only teams still in the tournament
+      const alive = picks.filter((c) => !ELIMINATED.has(c));
+      const prob = alive.reduce((s, c) => s + (champ[toBracket[c] || c] || 0), 0);
+      return { name: person.name, picks: alive, prob: prob };
+    }).filter((r) => r.picks.length > 0); // hide participants with no team left
     rows.sort((a, b) => b.prob - a.prob);
     const max = Math.max.apply(null, rows.map((r) => r.prob).concat(0.0001));
 
