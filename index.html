@@ -481,7 +481,7 @@
           const el = document.getElementById("visitStats");
           if (el) el.innerHTML =
             '<span class="online-now"><span class="live-dot-pulse"></span>' + online.toLocaleString() + " online now</span>" +
-            " · 👀 " + views.toLocaleString() + " views today · " + visitors.toLocaleString() + " visitors today";
+            " · 👀 " + views.toLocaleString() + " views · " + visitors.toLocaleString() + " visitors";
         };
         onlineRef.on("value", function (s) { online = s.numChildren() || 0; showVisits(); });
         dayRef.child("views").on("value", function (s) { views = s.val() || 0; showVisits(); });
