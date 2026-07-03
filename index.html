@@ -980,6 +980,49 @@
   //  the real winner overwrites the prediction and advances automatically.
   // =========================================================================
   const LIVE_URL = "https://worldcup26.ir/get/games";
+  // Backup source (GitHub, no key, rock-solid uptime) — same tournament, results only.
+  const BACKUP_URL = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json";
+
+  // Convert openfootball's format into the same shape applyLiveResults expects.
+  // Knockout matches are listed in match-number order (R32=73…, R16=89…, etc.).
+  function fromOpenFootball(of) {
+    const base = { "Round of 32": 73, "Round of 16": 89, "Quarter-final": 97, "Semi-final": 101, "Final": 103 };
+    const counters = {};
+    const nameFix = function (n) { return n === "USA" ? "United States" : n; };
+    const cvDate = function (ds, ts) {
+      const dm = /^(\d{4})-(\d{2})-(\d{2})/.exec(ds || "");
+      if (!dm) return "";
+      const tm = /(\d{1,2}):(\d{2})/.exec(ts || "");
+      const hh = tm ? ("0" + tm[1]).slice(-2) + ":" + tm[2] : "12:00";
+      return dm[2] + "/" + dm[3] + "/" + dm[1] + " " + hh;
+    };
+    const games = [];
+    (of.matches || []).forEach(function (m) {
+      const b = base[m.round];
+      if (b == null) return; // skip group stage + third-place match
+      if (counters[m.round] == null) counters[m.round] = 0;
+      const id = b + counters[m.round];
+      counters[m.round]++;
+      const ft = (m.score && m.score.ft) ? m.score.ft : null;
+      const p = (m.score && m.score.p) ? m.score.p : null;
+      const real = !/^[WL]\d/.test(m.team1 || "") && !/^[WL]\d/.test(m.team2 || "");
+      const fin = !!ft && real;
+      games.push({
+        id: String(id),
+        home_team_name_en: nameFix(m.team1),
+        away_team_name_en: nameFix(m.team2),
+        home_score: ft ? String(ft[0]) : "",
+        away_score: ft ? String(ft[1]) : "",
+        home_penalty_score: p ? String(p[0]) : "",
+        away_penalty_score: p ? String(p[1]) : "",
+        finished: fin ? "TRUE" : "FALSE",
+        time_elapsed: fin ? "finished" : "notstarted",
+        local_date: cvDate(m.date, m.time),
+        stadium_id: ""
+      });
+    });
+    return games;
+  }
 
   function applyLiveResults(games) {
     LIVE.clear();
@@ -1166,15 +1209,26 @@
         }
       })
       .catch(() => {
-        // Feed unreachable → fall back to the last saved results (not predictions).
+        // Primary feed unreachable. 1) show last saved snapshot instantly if we have one.
         let cached = null;
         try { cached = JSON.parse(localStorage.getItem("fifa_feed_cache") || "null"); } catch (e) {}
         if (cached && cached.length) {
           applyAndRender(cached);
           setBracketNote("Live feed offline — showing last saved results");
-        } else {
-          setBracketNote("Live feed unavailable — showing predictions");
         }
+        // 2) fetch the GitHub backup source for fresh results (also covers new visitors).
+        fetch(BACKUP_URL)
+          .then((r) => r.json())
+          .then((of) => {
+            const games = fromOpenFootball(of);
+            if (!games.length) throw new Error("empty backup");
+            try { localStorage.setItem("fifa_feed_cache", JSON.stringify(games)); } catch (e) {}
+            applyAndRender(games);
+            setBracketNote("Live scores offline — showing latest results (backup source)");
+          })
+          .catch(() => {
+            if (!(cached && cached.length)) setBracketNote("Live feed unavailable — showing predictions");
+          });
       })
       .finally(scheduleNext); // speeds up to 30s when matches are live
   }
