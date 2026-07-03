@@ -1140,17 +1140,23 @@
     setTimeout(refreshLive, LIVE.size > 0 ? FAST_MS : SLOW_MS);
   }
 
+  function applyAndRender(games) {
+    applyLiveResults(games);
+    buildBracket();
+    updateBracketVoters();
+    renderStandings();
+    renderWinChances();
+    updateCountdowns();
+  }
+
   function refreshLive() {
     fetch(LIVE_URL)
       .then((r) => r.json())
       .then((data) => {
         const games = Array.isArray(data) ? data : (data.games || data.data || []);
         if (!games.length) throw new Error("no games");
-        applyLiveResults(games);
-        buildBracket();
-        updateBracketVoters();
-        renderStandings();
-        renderWinChances();
+        try { localStorage.setItem("fifa_feed_cache", JSON.stringify(games)); } catch (e) {}
+        applyAndRender(games);
         if (LIVE.size > 0) {
           const chips = liveContestantChips();
           setBracketNote('<span class="live-dot-pulse"></span>' + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE" +
@@ -1160,7 +1166,15 @@
         }
       })
       .catch(() => {
-        setBracketNote("Showing predictions — live results unavailable");
+        // Feed unreachable → fall back to the last saved results (not predictions).
+        let cached = null;
+        try { cached = JSON.parse(localStorage.getItem("fifa_feed_cache") || "null"); } catch (e) {}
+        if (cached && cached.length) {
+          applyAndRender(cached);
+          setBracketNote("Live feed offline — showing last saved results");
+        } else {
+          setBracketNote("Live feed unavailable — showing predictions");
+        }
       })
       .finally(scheduleNext); // speeds up to 30s when matches are live
   }
