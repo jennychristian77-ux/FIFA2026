@@ -719,11 +719,12 @@
     13: -7, 14: -7, 15: -7, 16: -7       // Vancouver, Seattle, SF Bay, LA
   };
   const MATCH_KICKOFF = {}; // matchNumber -> kickoff time in UTC ms
-  function kickoffMs(local, stadiumId) {
+  function kickoffMs(local, stadiumId, explicitOffset) {
     const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/.exec(local || "");
     if (!m) return null;
-    const off = STADIUM_TZ[parseInt(stadiumId, 10)];
-    const offHrs = (off != null) ? off : -5;
+    let offHrs;
+    if (explicitOffset != null) offHrs = explicitOffset;
+    else { const off = STADIUM_TZ[parseInt(stadiumId, 10)]; offHrs = (off != null) ? off : -5; }
     return Date.UTC(+m[3], +m[1] - 1, +m[2], +m[4], +m[5]) - offHrs * 3600000;
   }
   function fmtCountdown(ms) {
@@ -1007,6 +1008,7 @@
       const p = (m.score && m.score.p) ? m.score.p : null;
       const real = !/^[WL]\d/.test(m.team1 || "") && !/^[WL]\d/.test(m.team2 || "");
       const fin = !!ft && real;
+      const offM = /UTC\s*([+-]?\d{1,2})/.exec(m.time || "");
       games.push({
         id: String(id),
         home_team_name_en: nameFix(m.team1),
@@ -1018,7 +1020,8 @@
         finished: fin ? "TRUE" : "FALSE",
         time_elapsed: fin ? "finished" : "notstarted",
         local_date: cvDate(m.date, m.time),
-        stadium_id: ""
+        stadium_id: "",
+        tz_offset: offM ? parseInt(offM[1], 10) : null
       });
     });
     return games;
@@ -1041,7 +1044,7 @@
       if (dt) MATCH_DT[id] = dt;
       const iso = isoDate(m.local_date);
       if (iso) MATCH_DATE[id] = iso;
-      const ko = kickoffMs(m.local_date, m.stadium_id);
+      const ko = kickoffMs(m.local_date, m.stadium_id, m.tz_offset);
       if (ko) MATCH_KICKOFF[id] = ko;
       const hs = parseInt(m.home_score, 10);
       const as = parseInt(m.away_score, 10);
@@ -1183,8 +1186,29 @@
     setTimeout(refreshLive, LIVE.size > 0 ? FAST_MS : SLOW_MS);
   }
 
-  function applyAndRender(games) {
+  // Overlay live in-progress info from worldcup26.ir (results stay from the primary source).
+  function overlayLive(wcGames) {
+    wcGames.forEach(function (m) {
+      const id = parseInt(m.id, 10);
+      if (!id || id < 73) return;
+      // accurate date/time/kickoff from the live feed (has real venue time zones)
+      const dt = fmtDateTime(m.local_date); if (dt) MATCH_DT[id] = dt;
+      const iso = isoDate(m.local_date); if (iso) MATCH_DATE[id] = iso;
+      const ko = kickoffMs(m.local_date, m.stadium_id); if (ko) MATCH_KICKOFF[id] = ko;
+      const te = (m.time_elapsed || "").toLowerCase();
+      if ((te === "live" || te === "inprogress") && !FINISHED.has(id)) {
+        LIVE.add(id);
+        LIVE_TEAMS.add(pollKey(m.home_team_name_en));
+        LIVE_TEAMS.add(pollKey(m.away_team_name_en));
+        const hs = parseInt(m.home_score, 10), as = parseInt(m.away_score, 10);
+        if (!isNaN(hs) && !isNaN(as)) SCORES[id] = [hs, as];
+      }
+    });
+  }
+
+  function applyAndRender(games, wcGames) {
     applyLiveResults(games);
+    if (wcGames && wcGames.length) overlayLive(wcGames);
     buildBracket();
     updateBracketVoters();
     renderStandings();
@@ -1193,44 +1217,43 @@
   }
 
   function refreshLive() {
-    fetch(LIVE_URL)
-      .then((r) => r.json())
-      .then((data) => {
-        const games = Array.isArray(data) ? data : (data.games || data.data || []);
-        if (!games.length) throw new Error("no games");
-        try { localStorage.setItem("fifa_feed_cache", JSON.stringify(games)); } catch (e) {}
-        applyAndRender(games);
-        if (LIVE.size > 0) {
-          const chips = liveContestantChips();
-          setBracketNote('<span class="live-dot-pulse"></span>' + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE" +
-            (chips ? ' <span class="live-chips">' + chips + "</span>" : ""));
-        } else {
-          setBracketNote("");
-        }
-      })
-      .catch(() => {
-        // Primary feed unreachable. 1) show last saved snapshot instantly if we have one.
-        let cached = null;
-        try { cached = JSON.parse(localStorage.getItem("fifa_feed_cache") || "null"); } catch (e) {}
-        if (cached && cached.length) {
-          applyAndRender(cached);
-          setBracketNote("Live feed offline — showing last saved results");
-        }
-        // 2) fetch the GitHub backup source for fresh results (also covers new visitors).
-        fetch(BACKUP_URL)
-          .then((r) => r.json())
-          .then((of) => {
-            const games = fromOpenFootball(of);
-            if (!games.length) throw new Error("empty backup");
-            try { localStorage.setItem("fifa_feed_cache", JSON.stringify(games)); } catch (e) {}
-            applyAndRender(games);
-            setBracketNote("Live scores offline — showing latest results (backup source)");
-          })
-          .catch(() => {
-            if (!(cached && cached.length)) setBracketNote("Live feed unavailable — showing predictions");
-          });
-      })
-      .finally(scheduleNext); // speeds up to 30s when matches are live
+    // PRIMARY results = openfootball (GitHub, reliable). worldcup26.ir is used only
+    // for the live-match pulse + in-progress scores. Fetch both, tolerate either failing.
+    Promise.allSettled([
+      fetch(BACKUP_URL).then(function (r) { return r.json(); }),
+      fetch(LIVE_URL).then(function (r) { return r.json(); })
+    ]).then(function (res) {
+      const ofRes = res[0], wcRes = res[1];
+
+      // worldcup26.ir games — for live overlay (and as a results fallback)
+      let wcGames = null;
+      if (wcRes.status === "fulfilled") {
+        const d = wcRes.value; wcGames = Array.isArray(d) ? d : (d.games || d.data || []);
+      }
+
+      // primary results from the backup source
+      let games = null;
+      if (ofRes.status === "fulfilled") {
+        const g = fromOpenFootball(ofRes.value);
+        if (g.length) games = g;
+      }
+      // fallbacks if the backup is unavailable
+      if (!games && wcGames && wcGames.length) games = wcGames;
+      if (!games) { try { const c = JSON.parse(localStorage.getItem("fifa_feed_cache") || "null"); if (c && c.length) games = c; } catch (e) {} }
+      if (!games || !games.length) { setBracketNote("Data unavailable — showing predictions"); return; }
+
+      try { localStorage.setItem("fifa_feed_cache", JSON.stringify(games)); } catch (e) {}
+      // only overlay live info if it isn't the same array we're already using for results
+      applyAndRender(games, (wcGames && wcGames !== games) ? wcGames : null);
+
+      if (LIVE.size > 0) {
+        const chips = liveContestantChips();
+        setBracketNote('<span class="live-dot-pulse"></span>' + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE" +
+          (chips ? ' <span class="live-chips">' + chips + "</span>" : ""));
+      } else {
+        setBracketNote("");
+      }
+    }).finally(scheduleNext);
   }
   refreshLive();
 
