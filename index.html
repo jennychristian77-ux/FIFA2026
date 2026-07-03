@@ -1167,10 +1167,11 @@
       return { name: person.name, picks: alive, prob: prob };
     }).filter((r) => r.picks.length > 0); // hide participants with no team left
     rows.sort((a, b) => b.prob - a.prob);
+    const total = rows.reduce((s, r) => s + r.prob, 0) || 1; // normalize to 100%
     const max = Math.max.apply(null, rows.map((r) => r.prob).concat(0.0001));
 
     el.innerHTML = rows.map((r) => {
-      const pct = (r.prob * 100).toFixed(1);
+      const pct = (r.prob / total * 100).toFixed(1);
       const width = Math.max(2, (r.prob / max) * 100);
       return '<div class="wc-row">' +
         '<span class="wc-name">' + r.name + '<small>' + r.picks.join(", ") + "</small></span>" +
