@@ -292,6 +292,8 @@
   }
   .panel-body { padding: 0 14px 16px; }
   .panel-body .table-wrap { margin: 0; box-shadow: none; }
+  .panel-body .payouts, .panel-body .settle { background: none; border: none; box-shadow: none; padding: 0; }
+  .panel-body .settle-chips { margin-top: 0; }
 
   /* still-in-contention */
   .standings-section { max-width: 1200px; margin: 0 auto; }
@@ -382,12 +384,20 @@
     </div>
   </details>
 
-  <section class="wc-section">
-    <div class="section-title">💰 Payout — if your team wins the cup <span class="wc-sub" id="payoutNote"></span></div>
-    <div class="payouts" id="payouts"></div>
-    <div class="settle-chips" id="settleChips"></div>
-    <div class="settle" id="settle"></div>
-  </section>
+  <details class="panel">
+    <summary>💰 Payout if your team wins <span class="hint" id="payoutNote"></span></summary>
+    <div class="panel-body">
+      <div class="payouts" id="payouts"></div>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary>Who pays who <span class="hint">click to expand</span></summary>
+    <div class="panel-body">
+      <div class="settle-chips" id="settleChips"></div>
+      <div class="settle" id="settle"></div>
+    </div>
+  </details>
 
   <footer class="site-footer">
     ⚽ FIFA World Cup 2026 · Live results from worldcup26.ir · Final at MetLife Stadium, Jul 19
