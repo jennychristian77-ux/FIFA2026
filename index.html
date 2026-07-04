@@ -332,6 +332,14 @@
       <div class="splash-bar"><span></span></div>
     </div>
   </div>
+  <script>
+    // Independent safety net: always remove the splash after a few seconds,
+    // even if the main script throws an error during startup.
+    setTimeout(function () {
+      var s = document.getElementById("splash");
+      if (s) { s.style.transition = "opacity .5s"; s.style.opacity = "0"; setTimeout(function () { s.style.display = "none"; }, 600); }
+    }, 4000);
+  </script>
 
   <header class="hero">
     <div class="title-row">
@@ -1271,7 +1279,7 @@
     return { pot: pot, share: share, winners: winners.map(function (w) { return PEOPLE[w].name; }), transfers: transfers };
   }
 
-  let settleChoice = null;
+  var settleChoice = null; // var (not let): renderPayouts() runs before this line at init
 
   // Payout: the pot goes to whoever picked the champion (split equally if shared).
   function renderPayouts() {
