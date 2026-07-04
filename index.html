@@ -114,6 +114,18 @@
   .payout-names { flex: 1; color: var(--muted); font-size: 12px; min-width: 120px; }
   .payout-amt { font-weight: 800; color: #8be0a4; font-size: 14px; white-space: nowrap; }
 
+  /* Settlement — who pays who */
+  .settle-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; }
+  .settle-chip { background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+  .settle-chip.active { background: var(--green); border-color: var(--green); color: #fff; font-weight: 700; }
+  .settle { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; }
+  .settle-head { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .settle-head b { color: var(--gold); }
+  .settle-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; border-top: 1px solid var(--line); }
+  .settle-row:first-of-type { border-top: none; }
+  .settle-arrow { color: var(--muted); }
+  .settle-amt { margin-left: auto; font-weight: 800; color: #8be0a4; white-space: nowrap; }
+
   .live-dot { width: 9px; height: 9px; border-radius: 50%; background: #e23b3b; flex: 0 0 auto; animation: blink 1.1s steps(1) infinite; }
 
   .pricing {
@@ -365,6 +377,8 @@
   <section class="wc-section">
     <div class="section-title">💰 Payout — if your team wins the cup <span class="wc-sub" id="payoutNote"></span></div>
     <div class="payouts" id="payouts"></div>
+    <div class="settle-chips" id="settleChips"></div>
+    <div class="settle" id="settle"></div>
   </section>
 
   <footer class="site-footer">
@@ -1226,12 +1240,44 @@
     return Object.keys(byId).map(function (k) { return byId[k]; });
   }
 
+  function fmtMoney(n) {
+    const r = Math.round(n * 100) / 100;
+    return "$" + r.toLocaleString(undefined, { minimumFractionDigits: (r % 1 ? 2 : 0), maximumFractionDigits: 2 });
+  }
+  // Each person's stake = what they paid in (all their picks, incl. eliminated ones).
+  function stakesArr() {
+    return state.map(function (list) { return list.reduce(function (s, _, i) { return s + priceForRank(i + 1); }, 0); });
+  }
+  // Who pays who if `country` wins: losers pay their stake to the winner(s).
+  function computeSettlement(country) {
+    const stakes = stakesArr();
+    const pot = stakes.reduce(function (a, b) { return a + b; }, 0);
+    const winners = [], losers = [];
+    state.forEach(function (list, p) { if (list.indexOf(country) >= 0) winners.push(p); else losers.push(p); });
+    if (!winners.length) return null;
+    const share = pot / winners.length;
+    const need = winners.map(function (w) { return share - stakes[w]; }); // net each winner should receive
+    const transfers = [];
+    let li = 0, remain = losers.length ? stakes[losers[0]] : 0;
+    for (let wi = 0; wi < winners.length; wi++) {
+      let n = need[wi];
+      while (n > 0.005 && li < losers.length) {
+        const pay = Math.min(n, remain);
+        transfers.push({ from: PEOPLE[losers[li]].name, to: PEOPLE[winners[wi]].name, amt: pay });
+        n -= pay; remain -= pay;
+        if (remain <= 0.005) { li++; remain = li < losers.length ? stakes[losers[li]] : 0; }
+      }
+    }
+    return { pot: pot, share: share, winners: winners.map(function (w) { return PEOPLE[w].name; }), transfers: transfers };
+  }
+
+  let settleChoice = null;
+
   // Payout: the pot goes to whoever picked the champion (split equally if shared).
   function renderPayouts() {
     const el = document.getElementById("payouts");
     if (!el) return;
-    let pot = 0;
-    state.forEach(function (list) { list.forEach(function (_, i) { pot += priceForRank(i + 1); }); });
+    const pot = stakesArr().reduce(function (a, b) { return a + b; }, 0);
     const byCountry = {};
     state.forEach(function (list, p) {
       list.forEach(function (c) {
@@ -1239,10 +1285,6 @@
         (byCountry[c] = byCountry[c] || []).push(PEOPLE[p].name);
       });
     });
-    const money = function (n) {
-      const r = Math.round(n * 100) / 100;
-      return "$" + r.toLocaleString(undefined, { minimumFractionDigits: (r % 1 ? 2 : 0), maximumFractionDigits: 2 });
-    };
     const countries = Object.keys(byCountry).sort(function (a, b) {
       return byCountry[a].length - byCountry[b].length || a.localeCompare(b);
     });
@@ -1252,11 +1294,35 @@
       return '<div class="payout-row">' +
         '<span class="payout-team">🏆 ' + labelOf(c) + "</span>" +
         '<span class="payout-names">' + names.join(", ") + "</span>" +
-        '<span class="payout-amt">' + money(each) + " each" + (names.length > 1 ? " (×" + names.length + ")" : "") + "</span>" +
+        '<span class="payout-amt">' + fmtMoney(each) + " each" + (names.length > 1 ? " (×" + names.length + ")" : "") + "</span>" +
         "</div>";
     }).join("") || '<div class="payout-row"><span class="payout-names">No teams left in contention.</span></div>';
     const note = document.getElementById("payoutNote");
-    if (note) note.textContent = "pot " + money(pot) + " — to whoever picks the champion";
+    if (note) note.textContent = "pot " + fmtMoney(pot) + " — to whoever picks the champion";
+
+    // ---- Who pays who (interactive: pick a still-alive team) ----
+    const chipsEl = document.getElementById("settleChips");
+    const settleEl = document.getElementById("settle");
+    if (!chipsEl || !settleEl) return;
+    if (!countries.length) { chipsEl.innerHTML = ""; settleEl.innerHTML = ""; return; }
+    if (countries.indexOf(settleChoice) < 0) settleChoice = countries[0];
+    chipsEl.innerHTML = "<span class='wc-sub' style='margin:0 4px 0 0'>Who pays who if →</span>" +
+      countries.map(function (c) {
+        return '<button class="settle-chip' + (c === settleChoice ? " active" : "") + '" data-c="' + c + '">' + labelOf(c) + "</button>";
+      }).join("");
+    chipsEl.querySelectorAll(".settle-chip").forEach(function (btn) {
+      btn.addEventListener("click", function () { settleChoice = btn.dataset.c; renderPayouts(); });
+    });
+    const s = computeSettlement(settleChoice);
+    if (s) {
+      settleEl.innerHTML =
+        '<div class="settle-head">If <b>' + labelOf(settleChoice) + "</b> wins: " + s.winners.join(", ") +
+        " collect " + fmtMoney(s.share) + " each</div>" +
+        s.transfers.map(function (t) {
+          return '<div class="settle-row"><span>' + t.from + '</span><span class="settle-arrow">→</span><span>' +
+            t.to + '</span><span class="settle-amt">' + fmtMoney(t.amt) + "</span></div>";
+        }).join("");
+    }
   }
 
   function applyAndRender(games) {
