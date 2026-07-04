@@ -1187,29 +1187,30 @@
     setTimeout(refreshLive, LIVE.size > 0 ? FAST_MS : SLOW_MS);
   }
 
-  // Overlay live in-progress info from worldcup26.ir (results stay from the primary source).
-  function overlayLive(wcGames) {
-    wcGames.forEach(function (m) {
-      const id = parseInt(m.id, 10);
-      if (!id || id < 73) return;
-      // accurate date/time/kickoff from the live feed (has real venue time zones)
-      const dt = fmtDateTime(m.local_date); if (dt) MATCH_DT[id] = dt;
-      const iso = isoDate(m.local_date); if (iso) MATCH_DATE[id] = iso;
-      const ko = kickoffMs(m.local_date, m.stadium_id); if (ko) MATCH_KICKOFF[id] = ko;
-      const te = (m.time_elapsed || "").toLowerCase();
-      if ((te === "live" || te === "inprogress") && !FINISHED.has(id)) {
-        LIVE.add(id);
-        LIVE_TEAMS.add(pollKey(m.home_team_name_en));
-        LIVE_TEAMS.add(pollKey(m.away_team_name_en));
-        const hs = parseInt(m.home_score, 10), as = parseInt(m.away_score, 10);
-        if (!isNaN(hs) && !isNaN(as)) SCORES[id] = [hs, as];
-      }
+  function wcDone(m) { const te = (m.time_elapsed || "").toLowerCase(); return m.finished === "TRUE" || te === "finished"; }
+  function wcLive(m) { const te = (m.time_elapsed || "").toLowerCase(); return te === "live" || te === "inprogress"; }
+  function wcDecisive(m) {
+    if (!wcDone(m)) return false;
+    const hs = parseInt(m.home_score, 10), as = parseInt(m.away_score, 10);
+    if (isNaN(hs) || isNaN(as)) return false;
+    if (hs !== as) return true;
+    const hp = parseInt(m.home_penalty_score, 10), ap = parseInt(m.away_penalty_score, 10);
+    return !isNaN(hp) && !isNaN(ap) && hp !== ap;
+  }
+  // Merge both sources: use worldcup26.ir when it has a decisive result or a live
+  // match; otherwise fall back to openfootball. Both records share the same shape.
+  function mergeGames(ofGames, wcGames) {
+    const byId = {};
+    (ofGames || []).forEach(function (g) { const id = parseInt(g.id, 10); if (id >= 73) byId[id] = g; });
+    (wcGames || []).forEach(function (m) {
+      const id = parseInt(m.id, 10); if (!id || id < 73) return;
+      if (wcDecisive(m) || wcLive(m) || !byId[id]) byId[id] = m;
     });
+    return Object.keys(byId).map(function (k) { return byId[k]; });
   }
 
-  function applyAndRender(games, wcGames) {
+  function applyAndRender(games) {
     applyLiveResults(games);
-    if (wcGames && wcGames.length) overlayLive(wcGames);
     buildBracket();
     updateBracketVoters();
     renderStandings();
@@ -1226,26 +1227,18 @@
     ]).then(function (res) {
       const ofRes = res[0], wcRes = res[1];
 
-      // worldcup26.ir games — for live overlay (and as a results fallback)
-      let wcGames = null;
-      if (wcRes.status === "fulfilled") {
-        const d = wcRes.value; wcGames = Array.isArray(d) ? d : (d.games || d.data || []);
-      }
+      let ofGames = null, wcGames = null;
+      if (ofRes.status === "fulfilled") { const g = fromOpenFootball(ofRes.value); if (g.length) ofGames = g; }
+      if (wcRes.status === "fulfilled") { const d = wcRes.value; wcGames = Array.isArray(d) ? d : (d.games || d.data || []); }
 
-      // primary results from the backup source
+      // Merge both sources for the most complete, accurate results.
       let games = null;
-      if (ofRes.status === "fulfilled") {
-        const g = fromOpenFootball(ofRes.value);
-        if (g.length) games = g;
-      }
-      // fallbacks if the backup is unavailable
-      if (!games && wcGames && wcGames.length) games = wcGames;
-      if (!games) { try { const c = JSON.parse(localStorage.getItem("fifa_feed_cache") || "null"); if (c && c.length) games = c; } catch (e) {} }
+      if (ofGames || (wcGames && wcGames.length)) games = mergeGames(ofGames, wcGames);
+      if (!games || !games.length) { try { const c = JSON.parse(localStorage.getItem("fifa_feed_cache") || "null"); if (c && c.length) games = c; } catch (e) {} }
       if (!games || !games.length) { setBracketNote("Data unavailable — showing predictions"); return; }
 
       try { localStorage.setItem("fifa_feed_cache", JSON.stringify(games)); } catch (e) {}
-      // only overlay live info if it isn't the same array we're already using for results
-      applyAndRender(games, (wcGames && wcGames !== games) ? wcGames : null);
+      applyAndRender(games);
 
       if (LIVE.size > 0) {
         const chips = liveContestantChips();
