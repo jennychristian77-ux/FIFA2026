@@ -1268,27 +1268,48 @@
   function stakesArr() {
     return state.map(function (list) { return list.reduce(function (s, _, i) { return s + priceForRank(i + 1); }, 0); });
   }
-  // Who pays who if `country` wins: losers pay their stake to the winner(s).
+  // Participants settle in pairs — money within a pair nets out.
+  const GROUPS = [
+    ["Nilpa", "Ruzwalt"],
+    ["Sandy", "Silas"],
+    ["Jay", "Ila"],
+    ["Smita", "Wilson"],
+    ["Pina", "Minesh"]
+  ];
+
+  // Collection if `country` wins, netted and settled between the pairs.
   function computeSettlement(country) {
     const stakes = stakesArr();
     const pot = stakes.reduce(function (a, b) { return a + b; }, 0);
-    const winners = [], losers = [];
-    state.forEach(function (list, p) { if (list.indexOf(country) >= 0) winners.push(p); else losers.push(p); });
-    if (!winners.length) return null;
-    const share = pot / winners.length;
-    const need = winners.map(function (w) { return share - stakes[w]; }); // net each winner should receive
+    const winnersIdx = [];
+    state.forEach(function (list, p) { if (list.indexOf(country) >= 0) winnersIdx.push(p); });
+    if (!winnersIdx.length) return null;
+    const share = pot / winnersIdx.length;
+
+    // net per person, then aggregated per pair (winnings − stake)
+    const idxOf = {}; PEOPLE.forEach(function (pp, i) { idxOf[pp.name] = i; });
+    const net = PEOPLE.map(function (_, p) { return (winnersIdx.indexOf(p) >= 0 ? share : 0) - stakes[p]; });
+    const label = GROUPS.map(function (g) { return g.join(" & "); });
+    const gNet = GROUPS.map(function (g) { return g.reduce(function (s, nm) { return s + (net[idxOf[nm]] || 0); }, 0); });
+
+    // pairs with a positive net collect; negative net pay
+    const collectors = [], payers = [];
+    GROUPS.forEach(function (_, gi) {
+      if (gNet[gi] > 0.005) collectors.push({ gi: gi, amt: gNet[gi] });
+      else if (gNet[gi] < -0.005) payers.push({ gi: gi, amt: -gNet[gi] });
+    });
     const transfers = [];
-    let li = 0, remain = losers.length ? stakes[losers[0]] : 0;
-    for (let wi = 0; wi < winners.length; wi++) {
-      let n = need[wi];
-      while (n > 0.005 && li < losers.length) {
-        const pay = Math.min(n, remain);
-        transfers.push({ from: PEOPLE[losers[li]].name, to: PEOPLE[winners[wi]].name, amt: pay });
-        n -= pay; remain -= pay;
-        if (remain <= 0.005) { li++; remain = li < losers.length ? stakes[losers[li]] : 0; }
+    let pi = 0, remain = payers.length ? payers[0].amt : 0;
+    for (let ci = 0; ci < collectors.length; ci++) {
+      let need = collectors[ci].amt;
+      while (need > 0.005 && pi < payers.length) {
+        const pay = Math.min(need, remain);
+        transfers.push({ from: label[payers[pi].gi], to: label[collectors[ci].gi], amt: pay });
+        need -= pay; remain -= pay;
+        if (remain <= 0.005) { pi++; remain = pi < payers.length ? payers[pi].amt : 0; }
       }
     }
-    return { pot: pot, share: share, winners: winners.map(function (w) { return PEOPLE[w].name; }), transfers: transfers };
+    return { pot: pot, share: share, winners: winnersIdx.map(function (p) { return PEOPLE[p].name; }), transfers: transfers };
   }
 
   var settleChoice = null; // var (not let): renderPayouts() runs before this line at init
@@ -1348,8 +1369,8 @@
           }).join("") + "</div>";
       }).join("");
       settleEl.innerHTML =
-        '<div class="settle-head">If <b>' + labelOf(settleChoice) + "</b> wins — " + s.winners.join(", ") +
-        " take " + fmtMoney(s.share) + " each</div>" + blocks;
+        '<div class="settle-head">If <b>' + labelOf(settleChoice) + "</b> wins — settled between pairs:</div>" +
+        (blocks || '<div class="settle-row"><span>Everyone breaks even.</span></div>');
     }
   }
 
