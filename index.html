@@ -1089,8 +1089,9 @@
       if (counters[m.round] == null) counters[m.round] = 0;
       const id = b + counters[m.round];
       counters[m.round]++;
-      const ft = (m.score && m.score.ft) ? m.score.ft : null;
-      const p = (m.score && m.score.p) ? m.score.p : null;
+      const sc = m.score || {};
+      const ft = sc.et || sc.ft || null; // final score = after extra time if it went there
+      const p = sc.p || null;            // penalty-shootout score
       const real = !/^[WL]\d/.test(m.team1 || "") && !/^[WL]\d/.test(m.team2 || "");
       const fin = !!ft && real;
       const offM = /UTC\s*([+-]?\d{1,2})/.exec(m.time || "");
