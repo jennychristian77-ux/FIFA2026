@@ -430,6 +430,7 @@
 
   // --- Poll config ----------------------------------------------------------
   const VOTES_LOCKED = true;     // votes are final — set to false to allow editing again
+  var r32Collapsed = true;       // Round of 32 column collapsed by default
   const PRICE_TIERS = [10, 15];  // 1st pick $10, 2nd pick $15
   function priceForRank(rank) { return PRICE_TIERS[Math.min(rank, PRICE_TIERS.length) - 1]; }
 
@@ -956,9 +957,21 @@
       col.className = "round";
       const title = document.createElement("div");
       title.className = "round-title";
-      title.textContent = round.title;
       const body = document.createElement("div");
       body.className = "round-body";
+      // Round of 32 is a lot of matches — make it a collapsible column (closed by default).
+      const collapsible = (round.title === "Round of 32");
+      const applyR32 = function () {
+        title.textContent = (r32Collapsed ? "▸ " : "▾ ") + round.title + " (" + round.matches.length + ")";
+        body.style.display = r32Collapsed ? "none" : "";
+      };
+      if (collapsible) {
+        title.style.cursor = "pointer";
+        applyR32();
+        title.addEventListener("click", function () { r32Collapsed = !r32Collapsed; applyR32(); });
+      } else {
+        title.textContent = round.title;
+      }
       round.matches.forEach((m) => {
         const isToday = !!MATCH_DATE[m.n] && MATCH_DATE[m.n] === TODAY;
         const box = document.createElement("div");
