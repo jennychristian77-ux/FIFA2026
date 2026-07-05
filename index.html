@@ -450,6 +450,15 @@
     { name: "Wilson",  picks: ["Argentina"] }
   ];
 
+  // Participants settle in pairs — money within a pair nets out.
+  const GROUPS = [
+    ["Nilpa", "Ruzwalt"],
+    ["Sandy", "Silas"],
+    ["Jay", "Ila"],
+    ["Smita", "Wilson"],
+    ["Pina", "Minesh"]
+  ];
+
   // state[personIndex] = ordered array of selected country names
   let state = PEOPLE.map((person) => person.picks.slice());
 
@@ -1269,15 +1278,6 @@
   function stakesArr() {
     return state.map(function (list) { return list.reduce(function (s, _, i) { return s + priceForRank(i + 1); }, 0); });
   }
-  // Participants settle in pairs — money within a pair nets out.
-  const GROUPS = [
-    ["Nilpa", "Ruzwalt"],
-    ["Sandy", "Silas"],
-    ["Jay", "Ila"],
-    ["Smita", "Wilson"],
-    ["Pina", "Minesh"]
-  ];
-
   // Collection if `country` wins, netted and settled between the pairs.
   function computeSettlement(country) {
     const stakes = stakesArr();
