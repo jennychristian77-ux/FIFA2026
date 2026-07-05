@@ -1166,6 +1166,34 @@
       // A draw still awaiting its shootout result stays as the prediction.
     });
 
+    // Infer winners from the NEXT round's participants: if a team appears in a
+    // later-round match, it must have won its feeding match — even when that
+    // match's own score is a draw with no shootout result recorded in the feed.
+    const byId = {};
+    games.forEach(function (g) { const id = parseInt(g.id, 10); if (id) byId[id] = g; });
+    const isReal = function (nm) { return nm && !/^Winner|^W\d|^L\d/.test(nm); };
+    ROUNDS.forEach(function (round) {
+      round.matches.forEach(function (m) {
+        const fg = byId[m.n];
+        if (!fg) return;
+        [[fg.home_team_name_en, m.teams[0]], [fg.away_team_name_en, m.teams[1]]].forEach(function (pr) {
+          const name = pr[0], slot = pr[1];
+          if (!slot || !slot.ref) return;    // only ref slots point back to a feeding match
+          if (!isReal(name)) return;         // must be a real advancer, not a placeholder
+          const fmid = slot.ref;
+          if (ACTUAL.has(fmid)) return;      // already resolved from a real score
+          WINNERS[fmid] = name;
+          ACTUAL.add(fmid);
+          FINISHED.add(fmid);
+          const feed = byId[fmid];           // find the loser of the feeding match
+          if (feed) {
+            const other = (feed.home_team_name_en === name) ? feed.away_team_name_en : feed.home_team_name_en;
+            if (isReal(other)) ELIMINATED.add(pollKey(other));
+          }
+        });
+      });
+    });
+
     // Drop any *prediction* whose team is already eliminated — a knocked-out team
     // can't win a future game, so that slot reverts to "Winner M__".
     Object.keys(WINNERS).forEach((k) => {
