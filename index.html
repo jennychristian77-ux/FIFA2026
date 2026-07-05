@@ -464,6 +464,8 @@
 
   // --- Firebase wiring ------------------------------------------------------
   let dbRef = null; // null => local mode
+  let resultsCacheRef = null; // shared last-known-good results (Firebase)
+  let lastCacheStr = "";      // to avoid redundant writes
   const statusEl = document.getElementById("status");
   const isConfigured = Object.keys(firebaseConfig).length > 0 && firebaseConfig.databaseURL;
 
@@ -477,6 +479,7 @@
     try {
       firebase.initializeApp(firebaseConfig);
       dbRef = firebase.database().ref("polls/fifa2026/votes");
+      resultsCacheRef = firebase.database().ref("polls/fifa2026/resultsCache");
 
       // Listen for live updates from everyone
       dbRef.on("value", (snap) => {
@@ -1385,37 +1388,75 @@
     updateCountdowns();
   }
 
+  function nowStamp() {
+    const now = new Date();
+    const pad = function (n) { return ("0" + n).slice(-2); };
+    return pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+  }
+
+  // Persist last-known-good results to Firebase so ANY visitor gets them when the
+  // live sources are down (throttled: only writes when the data actually changes).
+  function saveSharedCache(games) {
+    if (!resultsCacheRef) return;
+    const str = JSON.stringify(games);
+    if (str === lastCacheStr) return;
+    lastCacheStr = str;
+    try { resultsCacheRef.set({ t: firebase.database.ServerValue.TIMESTAMP, games: games }); } catch (e) {}
+  }
+
   function refreshLive() {
-    // PRIMARY results = openfootball (GitHub, reliable). worldcup26.ir is used only
-    // for the live-match pulse + in-progress scores. Fetch both, tolerate either failing.
+    // PRIMARY results = openfootball (GitHub, reliable). worldcup26.ir adds the
+    // live-match pulse + in-progress scores. Fetch both, tolerate either failing.
     Promise.allSettled([
       fetch(BACKUP_URL).then(function (r) { return r.json(); }),
       fetch(LIVE_URL).then(function (r) { return r.json(); })
     ]).then(function (res) {
       const ofRes = res[0], wcRes = res[1];
-
       let ofGames = null, wcGames = null;
       if (ofRes.status === "fulfilled") { const g = fromOpenFootball(ofRes.value); if (g.length) ofGames = g; }
       if (wcRes.status === "fulfilled") { const d = wcRes.value; wcGames = Array.isArray(d) ? d : (d.games || d.data || []); }
 
-      // Merge both sources for the most complete, accurate results.
-      let games = null;
-      if (ofGames || (wcGames && wcGames.length)) games = mergeGames(ofGames, wcGames);
-      if (!games || !games.length) { try { const c = JSON.parse(localStorage.getItem("fifa_feed_cache") || "null"); if (c && c.length) games = c; } catch (e) {} }
-      if (!games || !games.length) { setBracketNote("Data unavailable — showing predictions"); return; }
+      // Fresh, merged results from the live sources.
+      let fresh = null;
+      if (ofGames || (wcGames && wcGames.length)) fresh = mergeGames(ofGames, wcGames);
 
-      try { localStorage.setItem("fifa_feed_cache", JSON.stringify(games)); } catch (e) {}
-      applyAndRender(games);
+      if (fresh && fresh.length) {
+        try { localStorage.setItem("fifa_feed_cache", JSON.stringify(fresh)); } catch (e) {}
+        saveSharedCache(fresh); // persist for everyone
+        applyAndRender(fresh);
+        if (LIVE.size > 0) {
+          const chips = liveContestantChips();
+          setBracketNote('<span class="live-dot-pulse"></span>' + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE" +
+            (chips ? ' <span class="live-chips">' + chips + "</span>" : "") + ' <span class="upd">· updated ' + nowStamp() + "</span>");
+        } else {
+          setBracketNote('<span class="upd">updated ' + nowStamp() + "</span>");
+        }
+        return;
+      }
 
-      const now = new Date();
-      const pad = function (n) { return ("0" + n).slice(-2); };
-      const stamp = "updated " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
-      if (LIVE.size > 0) {
-        const chips = liveContestantChips();
-        setBracketNote('<span class="live-dot-pulse"></span>' + LIVE.size + " match" + (LIVE.size === 1 ? "" : "es") + " LIVE" +
-          (chips ? ' <span class="live-chips">' + chips + "</span>" : "") + ' <span class="upd">· ' + stamp + "</span>");
+      // Live sources unavailable → this device's last saved copy.
+      let cached = null;
+      try { cached = JSON.parse(localStorage.getItem("fifa_feed_cache") || "null"); } catch (e) {}
+      if (cached && cached.length) {
+        applyAndRender(cached);
+        setBracketNote('<span class="upd">last saved results (live sources offline)</span>');
+        return;
+      }
+
+      // No local copy → shared Firebase cache (covers brand-new visitors during an outage).
+      if (resultsCacheRef) {
+        resultsCacheRef.once("value").then(function (snap) {
+          const v = snap.val();
+          if (v && v.games && v.games.length) {
+            try { localStorage.setItem("fifa_feed_cache", JSON.stringify(v.games)); } catch (e) {}
+            applyAndRender(v.games);
+            setBracketNote('<span class="upd">saved results (live sources offline)</span>');
+          } else {
+            setBracketNote("Data unavailable — showing predictions");
+          }
+        }).catch(function () { setBracketNote("Data unavailable — showing predictions"); });
       } else {
-        setBracketNote('<span class="upd">' + stamp + "</span>");
+        setBracketNote("Data unavailable — showing predictions");
       }
     }).finally(scheduleNext);
   }
