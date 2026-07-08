@@ -203,10 +203,10 @@
   .bracket { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 14px; }
   .round { display: flex; flex-direction: column; min-width: 185px; flex: 0 0 auto; }
   .round-title { text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
-  /* collapsed Round of 32 → slim vertical strip so it takes almost no width */
-  .round.r32-collapsed { min-width: 0; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
-  .round.r32-collapsed .round-title { writing-mode: vertical-rl; margin: 0; padding: 10px 6px; color: var(--gold); }
-  .round.r32-collapsed .round-body { display: none; }
+  /* collapsed round → slim vertical strip so it takes almost no width */
+  .round.round-collapsed { min-width: 0; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+  .round.round-collapsed .round-title { writing-mode: vertical-rl; margin: 0; padding: 10px 6px; color: var(--gold); }
+  .round.round-collapsed .round-body { display: none; }
   .round-body { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 10px; }
   .match { background: var(--card); border: 1px solid var(--line); border-radius: 11px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.22); transition: transform .12s, border-color .12s; }
   .match:hover { transform: translateY(-2px); border-color: #3a4856; }
@@ -437,6 +437,7 @@
   // --- Poll config ----------------------------------------------------------
   const VOTES_LOCKED = true;     // votes are final — set to false to allow editing again
   var r32Collapsed = true;       // Round of 32 column collapsed by default
+  var r16Collapsed = true;       // Round of 16 column collapsed by default
   const PRICE_TIERS = [10, 15];  // 1st pick $10, 2nd pick $15
   function priceForRank(rank) { return PRICE_TIERS[Math.min(rank, PRICE_TIERS.length) - 1]; }
 
@@ -965,17 +966,25 @@
       title.className = "round-title";
       const body = document.createElement("div");
       body.className = "round-body";
-      // Round of 32 is a lot of matches — make it a collapsible column (closed by default).
-      const collapsible = (round.title === "Round of 32");
-      const applyR32 = function () {
-        title.textContent = (r32Collapsed ? "▸ " : "▾ ") + round.title + " (" + round.matches.length + ")";
-        body.style.display = r32Collapsed ? "none" : "";
-        col.classList.toggle("r32-collapsed", r32Collapsed);
+      // Round of 32 and Round of 16 have a lot of matches — make them collapsible columns (closed by default).
+      const collapsible = (round.title === "Round of 32" || round.title === "Round of 16");
+      const isCollapsed = function () {
+        return round.title === "Round of 32" ? r32Collapsed : r16Collapsed;
+      };
+      const applyCollapse = function () {
+        const c = isCollapsed();
+        title.textContent = (c ? "▸ " : "▾ ") + round.title + " (" + round.matches.length + ")";
+        body.style.display = c ? "none" : "";
+        col.classList.toggle("round-collapsed", c);
       };
       if (collapsible) {
         title.style.cursor = "pointer";
-        applyR32();
-        title.addEventListener("click", function () { r32Collapsed = !r32Collapsed; applyR32(); });
+        applyCollapse();
+        title.addEventListener("click", function () {
+          if (round.title === "Round of 32") { r32Collapsed = !r32Collapsed; }
+          else { r16Collapsed = !r16Collapsed; }
+          applyCollapse();
+        });
       } else {
         title.textContent = round.title;
       }
