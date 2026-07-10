@@ -781,6 +781,18 @@
     var p = function (n) { return ("0" + n).slice(-2); };
     return m[3] + "-" + p(m[1]) + "-" + p(m[2]);
   }
+  // Kick-off times are shown in US Eastern (ET, UTC-4 for summer 2026 — no DST changeover
+  // during the tournament window), converted from each match's UTC kickoff instant.
+  function fmtEastern(ms) {
+    const d = new Date(ms - 4 * 3600000);
+    var p = function (n) { return ("0" + n).slice(-2); };
+    return MONTHS[d.getUTCMonth()] + " " + d.getUTCDate() + " · " + p(d.getUTCHours()) + ":" + p(d.getUTCMinutes()) + " ET";
+  }
+  function isoEastern(ms) {
+    const d = new Date(ms - 4 * 3600000);
+    var p = function (n) { return ("0" + n).slice(-2); };
+    return d.getUTCFullYear() + "-" + p(d.getUTCMonth() + 1) + "-" + p(d.getUTCDate());
+  }
   function todayISO() {
     var d = new Date(), p = function (n) { return ("0" + n).slice(-2); };
     return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
@@ -1151,12 +1163,17 @@
       const id = parseInt(m.id, 10);
       if (!id) return;
       if (id < 73) return; // only knockout matches (73+) affect the bracket & eliminations
-      const dt = fmtDateTime(m.local_date);
-      if (dt) MATCH_DT[id] = dt;
-      const iso = isoDate(m.local_date);
-      if (iso) MATCH_DATE[id] = iso;
       const ko = kickoffMs(m.local_date, m.stadium_id, m.tz_offset);
-      if (ko) MATCH_KICKOFF[id] = ko;
+      if (ko) {
+        MATCH_KICKOFF[id] = ko;
+        MATCH_DT[id] = fmtEastern(ko);
+        MATCH_DATE[id] = isoEastern(ko);
+      } else {
+        const dt = fmtDateTime(m.local_date);
+        if (dt) MATCH_DT[id] = dt;
+        const iso = isoDate(m.local_date);
+        if (iso) MATCH_DATE[id] = iso;
+      }
       const hs = parseInt(m.home_score, 10);
       const as = parseInt(m.away_score, 10);
       const hp = parseInt(m.home_penalty_score, 10);
