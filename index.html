@@ -1182,7 +1182,11 @@
       const havePens = !isNaN(hp) && !isNaN(ap);
       const te = (m.time_elapsed || "").toLowerCase();
       const done = m.finished === "TRUE" || te === "finished";
-      const live = te === "live" || te === "inprogress";
+      // Guard against the feed flagging a match "live" before its own scheduled
+      // kickoff (seen occasionally from worldcup26.ir) — trust "live" only once
+      // the computed kickoff time has actually passed.
+      const kickoffPassed = !ko || Date.now() >= ko - 60000;
+      const live = (te === "live" || te === "inprogress") && kickoffPassed;
 
       if (live) {
         LIVE.add(id);
