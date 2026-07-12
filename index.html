@@ -442,6 +442,7 @@
   const VOTES_LOCKED = true;     // votes are final — set to false to allow editing again
   var r32Collapsed = true;       // Round of 32 column collapsed by default
   var r16Collapsed = true;       // Round of 16 column collapsed by default
+  var qfCollapsed  = true;       // Quarter-finals column collapsed by default
   const PRICE_TIERS = [10, 15];  // 1st pick $10, 2nd pick $15
   function priceForRank(rank) { return PRICE_TIERS[Math.min(rank, PRICE_TIERS.length) - 1]; }
 
@@ -988,10 +989,12 @@
       title.className = "round-title";
       const body = document.createElement("div");
       body.className = "round-body";
-      // Round of 32 and Round of 16 have a lot of matches — make them collapsible columns (closed by default).
-      const collapsible = (round.title === "Round of 32" || round.title === "Round of 16");
+      // Round of 32, Round of 16 and Quarter-finals are collapsible columns (closed by default).
+      const collapsible = (round.title === "Round of 32" || round.title === "Round of 16" || round.title === "Quarter-finals");
       const isCollapsed = function () {
-        return round.title === "Round of 32" ? r32Collapsed : r16Collapsed;
+        if (round.title === "Round of 32") return r32Collapsed;
+        if (round.title === "Round of 16") return r16Collapsed;
+        return qfCollapsed;
       };
       const applyCollapse = function () {
         const c = isCollapsed();
@@ -1004,7 +1007,8 @@
         applyCollapse();
         title.addEventListener("click", function () {
           if (round.title === "Round of 32") { r32Collapsed = !r32Collapsed; }
-          else { r16Collapsed = !r16Collapsed; }
+          else if (round.title === "Round of 16") { r16Collapsed = !r16Collapsed; }
+          else { qfCollapsed = !qfCollapsed; }
           applyCollapse();
         });
       } else {
