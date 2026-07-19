@@ -1517,7 +1517,27 @@
       const ofRes = res[0], wcRes = res[1];
       let ofGames = null, wcGames = null;
       if (ofRes.status === "fulfilled") { const g = fromOpenFootball(ofRes.value); if (g.length) ofGames = g; }
-      if (wcRes.status === "fulfilled") { const d = wcRes.value; wcGames = Array.isArray(d) ? d : (d.games || d.data || []); }
+      if (wcRes.status === "fulfilled") {
+        const d = wcRes.value;
+        let games = Array.isArray(d) ? d : (d.games || d.data || []);
+        // worldcup26.ir numbers the third-place playoff inline with the knockout
+        // rounds (…, SF, 3rd-place, Final), but this bracket has no 3rd-place slot
+        // (…, SF, Final) — so its id numbering runs one lower from the Final on.
+        // Drop the 3rd-place match and shift every later id down by one to
+        // re-align with our numbering (and openfootball's), or it silently
+        // overwrites the Final's score/date with the 3rd-place result.
+        const thirdId = games.reduce(function (acc, m) {
+          return (m.type === "third" || m.group === "3RD") ? parseInt(m.id, 10) : acc;
+        }, null);
+        games = games.filter(function (m) { return m.type !== "third" && m.group !== "3RD"; });
+        if (thirdId != null) {
+          games.forEach(function (m) {
+            const gid = parseInt(m.id, 10);
+            if (gid > thirdId) m.id = String(gid - 1);
+          });
+        }
+        wcGames = games;
+      }
 
       // Fresh, merged results from the live sources.
       let fresh = null;
